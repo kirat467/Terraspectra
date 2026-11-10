@@ -3,3 +3,6 @@
 __pycache__/
 *.pyc
 .ipynb_checkpoints/
+
+# Ignore locally trained model weights
+ml/models/*.pth
