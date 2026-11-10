@@ -23,7 +23,6 @@ def evaluate_model(model, dataloader, device=None):
     predicted = []
 
     with torch.no_grad():
-
         for images, labels in dataloader:
 
             images = images.to(device)
@@ -31,21 +30,45 @@ def evaluate_model(model, dataloader, device=None):
 
             predictions = outputs.argmax(dim=1)
 
-            actual.extend(labels.numpy())
-            predicted.extend(predictions.cpu().numpy())
+            actual.extend(labels.detach().cpu().numpy())
+            predicted.extend(predictions.detach().cpu().numpy())
 
-    print("Accuracy:", accuracy_score(actual, predicted))
-    print("Precision:", precision_score(
+    if not actual:
+        raise ValueError("Evaluation dataset is empty")
+
+    accuracy = accuracy_score(actual, predicted)
+
+    precision = precision_score(
         actual, predicted, average="weighted", zero_division=0
-    ))
-    print("Recall:", recall_score(
+    )
+
+    recall = recall_score(
         actual, predicted, average="weighted", zero_division=0
-    ))
-    print("F1 Score:", f1_score(
+    )
+
+    f1 = f1_score(
         actual, predicted, average="weighted", zero_division=0
-    ))
+    )
+
+    report = classification_report(
+        actual, predicted, zero_division=0, output_dict=True
+    )
+
+    print("\n--- TerraSpectra Model Evaluation ---")
+    print("Accuracy:", accuracy)
+    print("Precision:", precision)
+    print("Recall:", recall)
+    print("F1 Score:", f1)
 
     print("\nClassification Report:")
     print(classification_report(
         actual, predicted, zero_division=0
     ))
+
+    return {
+        "accuracy": accuracy,
+        "precision": precision,
+        "recall": recall,
+        "f1_score": f1,
+        "classification_report": report
+    }
