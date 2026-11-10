@@ -1,32 +1,20 @@
 
-from sklearn.model_selection import train_test_split
+import numpy as np
+from split_data import split_dataset
 
+images = np.random.rand(100, 16, 16, 200)
+labels = np.random.randint(0, 3, 100)
 
-def split_dataset(images, labels, test_size=0.2, val_size=0.2):
-    """
-    Split data into training, validation and testing sets.
-    """
+result = split_dataset(images, labels)
 
-    if len(images) != len(labels):
-        raise ValueError("Images and labels must have equal length")
+X_train, X_val, X_test, y_train, y_val, y_test = result
 
-    if len(images) < 3:
-        raise ValueError("Dataset needs at least 3 samples")
+print("Training:", len(X_train))
+print("Validation:", len(X_val))
+print("Testing:", len(X_test))
 
-    # First separate training data and temporary data
-    X_train, X_temp, y_train, y_temp = train_test_split(
-        images,
-        labels,
-        test_size=test_size,
-        random_state=42
-    )
+assert len(X_train) == 60
+assert len(X_val) == 20
+assert len(X_test) == 20
 
-    # Split temporary data into validation and testing
-    X_val, X_test, y_val, y_test = train_test_split(
-        X_temp,
-        y_temp,
-        test_size=0.5,
-        random_state=42
-    )
-
-    return X_train, X_val, X_test, y_train, y_val, y_test
+print("All dataset split tests passed!")
