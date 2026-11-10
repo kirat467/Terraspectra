@@ -1,0 +1,11 @@
+Project: TerraSpectra
+
+Dataset Name:
+Dataset Source:
+File Format:
+Crop Types:
+Disease Classes:
+Number of Spectral Bands:
+Image Dimensions:
+Number of Images:
+Labels Available: Yes/No
