@@ -1,11 +1,25 @@
-Project: TerraSpectra
 
-Dataset Name:
-Dataset Source:
-File Format:
-Crop Types:
-Disease Classes:
-Number of Spectral Bands:
-Image Dimensions:
-Number of Images:
-Labels Available: Yes/No
+PROJECT: TerraSpectra
+TASK: Hyperspectral Crop Disease Forecasting
+
+DATASET STATUS: Awaiting dataset from data collection team
+
+DATASET DETAILS:
+- Dataset name: Pending
+- Source: Pending
+- File format: Pending
+- Crop types: Pending
+- Disease classes: Pending
+- Number of spectral bands: Pending
+- Image dimensions: Pending
+- Wavelength information: Pending
+- Ground-truth labels: Pending
+
+PREPROCESSING:
+- Data validation: Implemented (real-data validation pending)
+- PCA implementation: Created (real-data execution pending)
+- PCA visualization: Created (real-data execution pending)
+
+NOTES:
+Actual dataset details and model results will be added
+after receiving and verifying the original dataset.
