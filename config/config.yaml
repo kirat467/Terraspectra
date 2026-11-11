@@ -1,0 +1,27 @@
+paths:
+  raw: data/raw
+  interim: data/interim
+  processed: data/processed
+  labels: data/labels
+  metadata: data/metadata
+
+sensor:
+  name: EnMAP            # EnMAP / PRISMA / EMIT / DESIS / Hyperion
+  # Bad band ranges in nm (water absorption). Sensor ke hisaab se badlo.
+  bad_band_ranges_nm: [[1340, 1470], [1790, 1990], [2450, 2600]]
+
+preprocessing:
+  reflectance_scale: 10000     # int reflectance -> 0-1
+  normalization: per_band      # per_band / minmax / none
+  savgol_window: 7
+  savgol_polyorder: 2
+  target_crs: EPSG:4326
+  target_resolution: 0.0003
+
+dataset:
+  patch_size: 32
+  stride: 32
+  max_nan_fraction: 0.2
+  block_size_patches: 8        # spatial split block size
+  split: {train: 0.7, val: 0.15, test: 0.15}
+  seed: 42

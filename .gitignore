@@ -1,0 +1,9 @@
+data/raw/
+data/interim/
+data/processed/
+*.tif
+*.h5
+*.npy
+__pycache__/
+.ipynb_checkpoints/
+.venv/

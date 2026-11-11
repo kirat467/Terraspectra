@@ -1,0 +1,12 @@
+numpy
+scipy
+pandas
+rasterio
+matplotlib
+h5py
+pyyaml
+scikit-learn
+tqdm
+jupyter
+# GDAL: pip se dikkat aaye to conda use karo:
+# conda install -c conda-forge gdal rasterio
