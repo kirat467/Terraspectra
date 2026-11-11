@@ -6,3 +6,6 @@ __pycache__/
 
 # Ignore locally trained model weights
 ml/models/*.pth
+# TerraSpectra local dataset and generated outputs
+ml/dataset/raw/
+ml/results/
