@@ -53,3 +53,13 @@ except Exception as e:
     log_source("EMIT L2A", "NA", f"search failed: {e}")
     # ===================== DAY 3: LABEL DATASETS + INDIAN PINES =====================
 print("\n===== DAY 3: Label datasets + Indian Pines test =====")
+# label datasets tracking sheet
+lab_path = "docs/label_datasets.csv"
+if not os.path.exists(lab_path):
+    with open(lab_path, "w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(["dataset", "crop", "disease", "link", "licence", "size", "usable"])
+        w.writerow(["(Kaggle me search karo: hyperspectral crop disease)", "", "", "", "", "", ""])
+        w.writerow(["(Zenodo me search karo: hyperspectral plant disease)", "", "", "", "", "", ""])
+        w.writerow(["(Mendeley Data me search karo: hyperspectral leaf disease)", "", "", "", "", "", ""])
+    print("Created docs/label_datasets.csv (isme kam se kam 3 datasets khud bharo)")
