@@ -115,3 +115,26 @@ if ok:
     plt.close()
     print("Saved figures in reports/figures/")
     log_source("Indian Pines", 1, "benchmark for pipeline testing, 200 bands")
+    # ===================== TRACKER + GIT =====================
+print("\n===== Tracker + Git =====")
+if os.path.exists("scripts/mark_done.py"):
+    subprocess.run([sys.executable, "scripts/mark_done.py", "2", "3"], stdout=subprocess.DEVNULL)
+    subprocess.run([sys.executable, "scripts/mark_done.py", "3", "3"])
+else:
+    print("scripts/mark_done.py nahi mili (pehle day1_all.py chalao)")
+
+try:
+    subprocess.run(["git", "add", "."], check=True)
+    subprocess.run(["git", "commit", "-m", "Day 2-3: data sources, label datasets, Indian Pines test"], check=True)
+    r = subprocess.run(["git", "remote"], capture_output=True, text=True)
+    if r.stdout.strip():
+        subprocess.run(["git", "push"], check=False)
+    else:
+        print("Remote set nahi hai. GitHub repo banake ye chalao:")
+        print("  git branch -M main")
+        print("  git remote add origin https://github.com/<username>/terraspectra-data.git")
+        print("  git push -u origin main")
+except Exception as e:
+    print("Git issue:", e)
+
+print("\nDAY 2-3 DONE.")
