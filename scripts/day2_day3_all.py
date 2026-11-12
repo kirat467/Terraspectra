@@ -51,3 +51,5 @@ except Exception as e:
     print("EMIT search skip hui:", e)
     print("(Earthdata account/login ya internet check karo. Baaki kaam chalega.)")
     log_source("EMIT L2A", "NA", f"search failed: {e}")
+    # ===================== DAY 3: LABEL DATASETS + INDIAN PINES =====================
+print("\n===== DAY 3: Label datasets + Indian Pines test =====")
