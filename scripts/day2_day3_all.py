@@ -63,3 +63,55 @@ if not os.path.exists(lab_path):
         w.writerow(["(Zenodo me search karo: hyperspectral plant disease)", "", "", "", "", "", ""])
         w.writerow(["(Mendeley Data me search karo: hyperspectral leaf disease)", "", "", "", "", "", ""])
     print("Created docs/label_datasets.csv (isme kam se kam 3 datasets khud bharo)")
+    # Indian Pines download
+os.makedirs("data/raw/indian_pines", exist_ok=True)
+files = {
+    "Indian_pines_corrected.mat": "http://www.ehu.eus/ccwintco/uploads/6/67/Indian_pines_corrected.mat",
+    "Indian_pines_gt.mat": "http://www.ehu.eus/ccwintco/uploads/c/c4/Indian_pines_gt.mat",
+}
+ok = True
+for name, url in files.items():
+    path = f"data/raw/indian_pines/{name}"
+    if not os.path.exists(path):
+        try:
+            print("Downloading", name, "...")
+            urllib.request.urlretrieve(url, path)
+        except Exception as e:
+            ok = False
+            print("Download fail:", name, e)
+            print("  Manually download karke data/raw/indian_pines/ me rakho.")
+
+if ok:
+    cube = sio.loadmat("data/raw/indian_pines/Indian_pines_corrected.mat")["indian_pines_corrected"]
+    gt = sio.loadmat("data/raw/indian_pines/Indian_pines_gt.mat")["indian_pines_gt"]
+
+    print("Cube (H,W,B):", cube.shape, "| GT:", gt.shape)
+    classes, counts = np.unique(gt, return_counts=True)
+    print("Pixels per class:", dict(zip(classes.tolist(), counts.tolist())))
+
+    cube = np.transpose(cube, (2, 0, 1)).astype("float32")   # (B,H,W)
+    os.makedirs("data/interim", exist_ok=True)
+    np.save("data/interim/indian_pines_cube.npy", cube)
+    np.save("data/interim/indian_pines_gt.npy", gt.astype("int32"))
+
+    os.makedirs("reports/figures", exist_ok=True)
+    plt.figure(figsize=(9, 5))
+    for c in classes:
+        if c == 0:
+            continue
+        plt.plot(cube[:, gt == c].mean(axis=1), label=f"class {c}")
+    plt.xlabel("Band index"); plt.ylabel("Mean value")
+    plt.title("Indian Pines: class-wise mean spectra")
+    plt.legend(ncol=4, fontsize=7); plt.tight_layout()
+    plt.savefig("reports/figures/indian_pines_spectra.png", dpi=150)
+    plt.close()
+
+    # NaN/range check + band means figure
+    print("NaN count:", int(np.isnan(cube).sum()), "| min/max:", float(cube.min()), float(cube.max()))
+    plt.figure(figsize=(6, 5))
+    plt.imshow(gt, cmap="nipy_spectral"); plt.colorbar(label="class")
+    plt.title("Indian Pines ground truth"); plt.tight_layout()
+    plt.savefig("reports/figures/indian_pines_gt.png", dpi=150)
+    plt.close()
+    print("Saved figures in reports/figures/")
+    log_source("Indian Pines", 1, "benchmark for pipeline testing, 200 bands")
