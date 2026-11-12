@@ -22,3 +22,32 @@ def log_source(name, n_scenes, note):
         if new:
             w.writerow(["date", "source", "n_scenes", "note"])
         w.writerow([date.today(), name, n_scenes, note])
+# ===================== DAY 2: DATA SOURCES =====================
+print("\n===== DAY 2: Hyperspectral data sources =====")
+print("MANUAL KAAM (browser me register karo):")
+print("  1. NASA Earthdata : https://urs.earthdata.nasa.gov   (EMIT)")
+print("  2. DLR EOWEB      : https://eoweb.dlr.de             (EnMAP, DESIS)")
+print("  3. ASI PRISMA     : https://prisma.asi.it            (PRISMA)")
+print("  4. USGS Earth Explorer : https://earthexplorer.usgs.gov (Hyperion archive)")
+
+try:
+    import earthaccess
+    print("\nEMIT scenes search ho rahi hai (Earthdata login poochega)...")
+    earthaccess.login()
+    results = earthaccess.search_data(
+        short_name="EMITL2ARFL",
+        bounding_box=BBOX,
+        temporal=DATE_RANGE,
+        count=20,
+    )
+    print("EMIT scenes mile:", len(results))
+    names = [r["umm"]["GranuleUR"] for r in results]
+    for n in names[:10]:
+        print("  ", n)
+    with open("docs/emit_scenes_found.txt", "w") as f:
+        f.write("\n".join(names))
+    log_source("EMIT L2A", len(results), f"bbox={BBOX}, dates={DATE_RANGE}")
+except Exception as e:
+    print("EMIT search skip hui:", e)
+    print("(Earthdata account/login ya internet check karo. Baaki kaam chalega.)")
+    log_source("EMIT L2A", "NA", f"search failed: {e}")
