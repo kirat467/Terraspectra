@@ -1,0 +1,15 @@
+Hello Sir/Ma'am,
+
+I am Kailash Kumar (Ref: ITS/DSML/1513), working on TerraSpectra: Hyperspectral Crop Disease Forecasting. My role is Data Collection & Preparation. Kindly guide me on:
+
+1. Will disease labels / field data be provided by the company? If not, can I use public datasets?
+2. Target crop, disease and region?
+3. Preferred sensor (EnMAP / PRISMA / EMIT / other)?
+4. Required output format for the modeling team (.npy / HDF5 / .tif)?
+5. Patch-level or pixel-level classification?
+6. Is multi-date time series data needed for forecasting?
+7. Storage / compute limits?
+8. How often should I share progress updates?
+
+Thank you.
+Kailash Kumar
