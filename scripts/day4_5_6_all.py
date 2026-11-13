@@ -227,3 +227,20 @@ with open("docs/day4_6_summary.md", "w", encoding="utf-8") as f:
     f.write(f"- Noisy bands (std outlier): {noisy}\n- Lowest SNR bands: {low_snr}\n")
     f.write("- Figures: reports/figures/eda_*.png\n- Stats: data/metadata/band_stats.csv\n")
 print("Saved docs/day4_6_summary.md")
+# ============================================================
+# Tracker + Git
+# ============================================================
+print("\n===== Tracker + Git =====")
+if os.path.exists("scripts/mark_done.py"):
+    for d in ("4", "5"):
+        subprocess.run([sys.executable, "scripts/mark_done.py", d, "3"], stdout=subprocess.DEVNULL)
+    subprocess.run([sys.executable, "scripts/mark_done.py", "6", "3"])
+try:
+    subprocess.run(["git", "add", "."], check=True)
+    subprocess.run(["git", "commit", "-m", "Day 4-6: inventory, metadata inspection, EDA"], check=True)
+    if subprocess.run(["git", "remote"], capture_output=True, text=True).stdout.strip():
+        subprocess.run(["git", "push"], check=False)
+except Exception as e:
+    print("Git issue:", e)
+
+print("\nDAY 4-6 DONE. Figures: reports/figures/ | Summary: docs/day4_6_summary.md")
