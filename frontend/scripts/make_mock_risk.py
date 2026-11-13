@@ -26,6 +26,9 @@ RISK_DIR = OUT / "risk"
 ACRES_PER_PIXEL = PIXEL_M ** 2 / SQ_M_PER_ACRE
 HIGH = 0.6          # "high risk" threshold used for acres at risk and zones
 MODERATE = 0.3
+# simulated spectral signals: key, label, unit. Disease lowers greenness and leaf water and shifts the red edge toward blue.
+SIGNALS = [("ndvi", "Greenness (NDVI)", ""), ("red_edge", "Red-edge position", "nm"), ("water", "Leaf water index", "")]
+SIGNAL_MODEL = {"ndvi": (0.86, 0.34, 3), "red_edge": (722.0, 14.0, 1), "water": (1.00, 0.24, 3)}   # healthy value, drop at full risk, decimals
 
 
 def field_masks():
@@ -95,6 +98,8 @@ def main():
     RISK_DIR.mkdir(parents=True, exist_ok=True)
     crop, owner = field_masks()
     history = []
+    signals = {key: {"label": label, "unit": unit, "healthy": [], "outbreak": []} for key, label, unit in SIGNALS}
+    sig_rng = np.random.default_rng(5)
 
     for step, date in enumerate(SCAN_DATES):
         risk = risk_map(step, 100 + step, crop, owner)
@@ -135,12 +140,20 @@ def main():
             "risk": [[None if np.isnan(v) else float(v) for v in row] for row in shown],
         }
         (RISK_DIR / f"risk_{date}.json").write_text(json.dumps(payload, separators=(",", ":")))
-        history.append({"date": date, "acres_high": acres_high, "acres_moderate": acres_mod, "peak_risk": payload["summary"]["peak_risk"]})
+        history.append({"date": date, "acres_high": acres_high, "acres_moderate": acres_mod, "peak_risk": payload["summary"]["peak_risk"],
+                        "mean_risk": payload["summary"]["mean_risk"], "zones": len(zones)})
+        # simulated spectral signals: the 60 riskiest crop pixels (the outbreak core) against the median healthy pixel
+        core = float(np.sort(risk[crop])[-60:].mean())
+        for key, _, _ in SIGNALS:
+            h, drop, digits = SIGNAL_MODEL[key]
+            signals[key]["healthy"].append(round(h + 0.004 * h * sig_rng.normal(), digits))
+            signals[key]["outbreak"].append(round(h - drop * core ** 1.2 + 0.004 * h * sig_rng.normal(), digits))
         print(f"{date}: high-risk {acres_high:6.1f} ac, moderate {acres_mod:6.1f} ac, zones {len(zones)}, "
               f"cells >=0.8: {int(((risk >= 0.8) & crop).sum())}")
 
     (RISK_DIR / "risk_index.json").write_text(json.dumps({"dates": SCAN_DATES, "latest": SCAN_DATES[-1], "history": history,
-                                                         "high_threshold": HIGH, "moderate_threshold": MODERATE}, indent=2))
+                                                         "high_threshold": HIGH, "moderate_threshold": MODERATE,
+                                                         "signals": signals}, indent=2))
 
 
 if __name__ == "__main__":

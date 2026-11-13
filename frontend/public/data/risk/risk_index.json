@@ -13,39 +13,113 @@
       "date": "2026-10-06",
       "acres_high": 0.0,
       "acres_moderate": 0.0,
-      "peak_risk": 0.22
+      "peak_risk": 0.22,
+      "mean_risk": 0.049,
+      "zones": 0
     },
     {
       "date": "2026-10-13",
       "acres_high": 0.0,
       "acres_moderate": 0.0,
-      "peak_risk": 0.3
+      "peak_risk": 0.3,
+      "mean_risk": 0.049,
+      "zones": 0
     },
     {
       "date": "2026-10-20",
       "acres_high": 0.0,
       "acres_moderate": 2.7,
-      "peak_risk": 0.45
+      "peak_risk": 0.45,
+      "mean_risk": 0.052,
+      "zones": 0
     },
     {
       "date": "2026-10-27",
       "acres_high": 0.2,
       "acres_moderate": 9.3,
-      "peak_risk": 0.61
+      "peak_risk": 0.61,
+      "mean_risk": 0.059,
+      "zones": 0
     },
     {
       "date": "2026-11-03",
       "acres_high": 5.2,
       "acres_moderate": 17.1,
-      "peak_risk": 0.8
+      "peak_risk": 0.8,
+      "mean_risk": 0.071,
+      "zones": 1
     },
     {
       "date": "2026-11-10",
       "acres_high": 15.4,
       "acres_moderate": 30.0,
-      "peak_risk": 0.99
+      "peak_risk": 0.99,
+      "mean_risk": 0.089,
+      "zones": 2
     }
   ],
   "high_threshold": 0.6,
-  "moderate_threshold": 0.3
+  "moderate_threshold": 0.3,
+  "signals": {
+    "ndvi": {
+      "label": "Greenness (NDVI)",
+      "unit": "",
+      "healthy": [
+        0.857,
+        0.858,
+        0.857,
+        0.858,
+        0.861,
+        0.856
+      ],
+      "outbreak": [
+        0.826,
+        0.805,
+        0.768,
+        0.698,
+        0.629,
+        0.539
+      ]
+    },
+    "red_edge": {
+      "label": "Red-edge position",
+      "unit": "nm",
+      "healthy": [
+        721.3,
+        724.2,
+        722.6,
+        719.9,
+        717.3,
+        721.9
+      ],
+      "outbreak": [
+        722.0,
+        724.5,
+        713.0,
+        717.0,
+        711.6,
+        707.9
+      ]
+    },
+    "water": {
+      "label": "Leaf water index",
+      "unit": "",
+      "healthy": [
+        1.005,
+        1.001,
+        1.0,
+        1.0,
+        0.996,
+        0.996
+      ],
+      "outbreak": [
+        0.98,
+        0.958,
+        0.926,
+        0.884,
+        0.834,
+        0.772
+      ]
+    }
+  }
 }

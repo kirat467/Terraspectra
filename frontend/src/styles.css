@@ -24,7 +24,7 @@ button, input { font: inherit; color: inherit; }
 .small { font-size: 12px; }
 code { font: 12.5px var(--mono); background: var(--panel2); padding: 2px 6px; border-radius: 5px; }
 
-.app { height: 100%; display: grid; grid-template-columns: 340px minmax(0, 1fr); grid-template-rows: 56px minmax(0, 1fr); grid-template-areas: "top top" "side map"; }
+.app { height: 100%; display: grid; grid-template-columns: 340px minmax(0, 1fr); grid-template-rows: 56px minmax(0, 1fr) auto; grid-template-areas: "top top" "side map" "side time"; }
 .topbar { grid-area: top; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 20px; border-bottom: 1px solid var(--line); background: var(--panel); }
 .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .mark { width: 32px; height: 32px; border-radius: 8px; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; flex: none; }
@@ -63,7 +63,9 @@ input[type=range] { flex: 1; min-width: 80px; accent-color: var(--accent); }
 .field-row .num { color: var(--muted); font-size: 12.5px; }
 .detail { margin-top: 12px; padding: 12px; border-radius: 9px; background: var(--panel2); display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
 .dates { list-style: none; margin: 0 0 10px; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-.dates li { background: var(--panel2); border-radius: 7px; padding: 5px 10px; font-size: 12.5px; }
+.dates li { list-style: none; }
+.dates button { width: 100%; text-align: left; background: var(--panel2); border: 1px solid transparent; border-radius: 7px; padding: 5px 10px; font-size: 12.5px; cursor: pointer; }
+.dates button:hover { border-color: var(--line); }
 
 .map { grid-area: map; position: relative; overflow: hidden; min-width: 0; min-height: 0;
   background-color: #0b100e; background-image: linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px); background-size: 40px 40px; }
@@ -82,7 +84,7 @@ input[type=range] { flex: 1; min-width: 80px; accent-color: var(--accent); }
 .state h1 { margin: 0; }
 
 @media (max-width: 900px) {
-  .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: 56px 62vh auto; grid-template-areas: "top" "map" "side"; height: auto; min-height: 100%; }
+  .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: 56px 56vh auto auto; grid-template-areas: "top" "map" "time" "side"; height: auto; min-height: 100%; }
   .sidebar { border-right: 0; border-top: 1px solid var(--line); overflow: visible; }
   .brand small, .chip:first-child { display: none; }
   .topbar { padding: 0 16px; }
@@ -99,10 +101,34 @@ input[type=range] { flex: 1; min-width: 80px; accent-color: var(--accent); }
 .zone-row .num { color: var(--ink); font-weight: 600; font-size: 13px; }
 .risk-chip { min-width: 44px; text-align: center; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, .45); }
 .field-row { grid-template-columns: 14px minmax(0, 1fr) auto; }
-.dates li.current { background: rgba(155, 210, 90, .16); box-shadow: inset 0 0 0 1px rgba(155, 210, 90, .55); }
+.dates button.current { background: rgba(155, 210, 90, .16); box-shadow: inset 0 0 0 1px rgba(155, 210, 90, .55); }
 .legend { position: absolute; left: 16px; top: 12px; z-index: 5; width: 250px; padding: 10px 12px 9px; background: rgba(21, 27, 24, .9); border: 1px solid var(--line); border-radius: 10px; backdrop-filter: blur(4px); }
 .legend-title { font-size: 12px; font-weight: 600; margin-bottom: 8px; }
 .legend-bar { height: 10px; border-radius: 5px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .15); }
 .legend-ticks { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 4px; }
 .coords b { color: var(--ink); font-weight: 600; }
 @media (max-width: 900px) { .legend { width: 200px; } .chip:nth-child(2) { display: none; } }
+
+/* ---- timeline, charts ---- */
+.timeline { grid-area: time; display: flex; align-items: center; gap: 8px; padding: 10px 16px 12px; background: var(--panel); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+.tl-btn { width: 34px; height: 34px; flex: none; display: grid; place-items: center; font-size: 20px; line-height: 1; background: var(--panel2); border: 1px solid var(--line); border-radius: 9px; cursor: pointer; }
+.tl-btn:hover:not(:disabled) { border-color: var(--accent); }
+.tl-btn:disabled { opacity: .35; cursor: default; }
+.tl-btn.play { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); width: 40px; }
+.tl-track { flex: 1; min-width: 0; margin: 0 10px; }
+.tl-track input[type=range] { width: 100%; height: 20px; display: block; margin: 4px 0 2px; }
+.tl-ticks { position: relative; height: 22px; margin: 0 8px; }
+.tl-tick { position: absolute; top: 0; transform: translateX(-50%); background: none; border: 0; padding: 2px 4px; font-size: 11.5px; color: var(--muted); cursor: pointer; white-space: nowrap; }
+.tl-tick.on { color: var(--accent); font-weight: 700; }
+.tl-now { flex: none; color: var(--muted); font-size: 12px; white-space: nowrap; }
+.delta { margin: 10px 0 0; font-size: 12.5px; color: var(--muted); }
+.delta.up { color: #f58f4f; font-weight: 600; } .delta.down { color: var(--accent); font-weight: 600; }
+.chart svg { width: 100%; height: auto; display: block; }
+.chart .ax { fill: #95a59b; font-size: 10px; } .chart .ax.on { fill: #e9efea; font-weight: 700; } .chart .ax.unit { font-size: 9.5px; }
+.legend-row { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 0 0 6px; font-size: 12px; color: var(--muted); }
+.legend-row i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+.chart-note { margin: 8px 0 6px !important; font-size: 12.5px; }
+.seg { display: flex; gap: 4px; margin-bottom: 10px; }
+.seg button { flex: 1; padding: 5px 4px; font-size: 11.5px; border: 1px solid var(--line); background: var(--panel2); border-radius: 7px; cursor: pointer; color: var(--muted); }
+.seg button.on { background: rgba(155, 210, 90, .14); border-color: rgba(155, 210, 90, .55); color: var(--ink); font-weight: 600; }
+@media (max-width: 900px) { .timeline { border-left: 0; padding: 8px 12px 10px; gap: 6px; } .tl-now { display: none; } .tl-tick { font-size: 10px; } .tl-track { margin: 0 4px; } }

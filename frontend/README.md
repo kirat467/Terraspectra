@@ -43,6 +43,9 @@ frontend/
   src/components/Sidebar.jsx     farm facts, layer switches, field list
   src/components/MapControls.jsx zoom buttons, scale bar, coordinates, risk under the pointer
   src/components/RiskLegend.jsx  colour scale
+  src/components/Timeline.jsx    play/pause, step buttons and date slider under the map
+  src/components/TrendChart.jsx  acres at high and moderate risk at every scan
+  src/components/SignalChart.jsx simulated spectral signals (NDVI, red edge, leaf water): outbreak core vs healthy
   src/lib/geo.js                 camera fitting, scale bar maths, formatting
   src/lib/risk.js                risk colours, labels, heatmap picture, cell lookup
   src/styles.css
@@ -75,4 +78,4 @@ The dashboard reads one file per scan date. The real model's API should return t
 
 - `risk` is row by row from the north edge. Each cell is the chance (0 to 1) that blight shows up within `horizon_days`. `null` means no crop there (a farm track).
 - High risk is 0.6 or more, moderate is 0.3 to 0.6.
-- `risk_index.json` lists the scan dates, the latest one, and a history of acres at high risk.
+- `risk_index.json` lists the scan dates, the latest one, a history of acres at risk (and mean risk and zone count) per scan, and the simulated spectral `signals` (healthy and outbreak-core values per scan for each index). The dashboard loads every file listed in `dates`, so the timeline works with any number of scans.

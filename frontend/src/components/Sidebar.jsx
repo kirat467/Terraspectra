@@ -1,7 +1,9 @@
 import { fmtAcres, fmtDate } from "../lib/geo.js";
+import TrendChart from "./TrendChart.jsx";
+import SignalChart from "./SignalChart.jsx";
 import { riskLabel, riskSolid, riskText } from "../lib/risk.js";
 
-export default function Sidebar({ meta, fields, risk, selected, hovered, onSelect, onZone, layers, setLayers }) {
+export default function Sidebar({ meta, fields, risk, prevRisk, history, index, onIndex, selected, hovered, onSelect, onZone, layers, setLayers }) {
   const stats = Object.fromEntries((risk?.fields ?? []).map((f) => [f.name, f]));
   const sorted = [...fields].sort((a, b) => (stats[b.properties.name]?.peak_risk ?? 0) - (stats[a.properties.name]?.peak_risk ?? 0));
   const active = fields.find((f) => f.properties.name === selected);
@@ -14,6 +16,10 @@ export default function Sidebar({ meta, fields, risk, selected, hovered, onSelec
         <section className="panel risk-panel">
           <h3>Predicted outbreak risk</h3>
           <p className="muted small">Chance that fungal blight shows up in the next {risk.horizon_days} days, from the scan of {fmtDate(risk.date)}.</p>
+          {prevRisk && (() => {
+            const d = s.acres_high - prevRisk.summary.acres_high;
+            return <p className={"delta " + (d > 0.05 ? "up" : d < -0.05 ? "down" : "")}>{d > 0.05 ? "▲" : d < -0.05 ? "▼" : "•"} {d >= 0 ? "+" : "−"}{fmtAcres(Math.abs(d))} high-risk acres since {fmtDate(prevRisk.date)}</p>;
+          })()}
           <dl className="stats">
             <div><dt>High-risk area, acres</dt><dd className="num bad">{fmtAcres(s.acres_high)}</dd></div>
             <div><dt>Share of farm</dt><dd className="num">{((s.acres_high / meta.farm_acres) * 100).toFixed(1)}<span>%</span></dd></div>
@@ -86,11 +92,23 @@ export default function Sidebar({ meta, fields, risk, selected, hovered, onSelec
       </section>
 
       <section className="panel">
+        <h3>Area at risk over time</h3>
+        <TrendChart history={history.history} index={index} onIndex={onIndex} />
+      </section>
+
+      <section className="panel">
+        <h3>Spectral signals</h3>
+        <SignalChart signals={history.signals} dates={history.dates} index={index} />
+      </section>
+
+      <section className="panel">
         <h3>Scan dates</h3>
         <ul className="dates">
-          {meta.scan_dates.map((d) => <li key={d} className={"num" + (risk && d === risk.date ? " current" : "")}>{fmtDate(d)}</li>)}
+          {history.dates.map((d, i) => (
+            <li key={d}><button type="button" className={"num" + (i === index ? " current" : "")} onClick={() => onIndex(i)}>{fmtDate(d)}</button></li>
+          ))}
         </ul>
-        <p className="muted small">One simulated scan per week. A timeline slider will step through them.</p>
+        <p className="muted small">One simulated scan per week. Use the timeline under the map to play through them.</p>
       </section>
     </aside>
   );
