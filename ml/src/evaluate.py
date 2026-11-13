@@ -1,11 +1,11 @@
-
 import torch
 from sklearn.metrics import (
     accuracy_score,
     precision_score,
     recall_score,
     f1_score,
-    classification_report
+    classification_report,
+    confusion_matrix
 )
 
 
@@ -30,8 +30,8 @@ def evaluate_model(model, dataloader, device=None):
 
             predictions = outputs.argmax(dim=1)
 
-            actual.extend(labels.detach().cpu().numpy())
-            predicted.extend(predictions.detach().cpu().numpy())
+            actual.extend(labels.cpu().numpy())
+            predicted.extend(predictions.cpu().numpy())
 
     if not actual:
         raise ValueError("Evaluation dataset is empty")
@@ -39,19 +39,34 @@ def evaluate_model(model, dataloader, device=None):
     accuracy = accuracy_score(actual, predicted)
 
     precision = precision_score(
-        actual, predicted, average="weighted", zero_division=0
+        actual, predicted,
+        average="weighted",
+        zero_division=0
     )
 
     recall = recall_score(
-        actual, predicted, average="weighted", zero_division=0
+        actual, predicted,
+        average="weighted",
+        zero_division=0
     )
 
     f1 = f1_score(
-        actual, predicted, average="weighted", zero_division=0
+        actual, predicted,
+        average="weighted",
+        zero_division=0
     )
 
     report = classification_report(
-        actual, predicted, zero_division=0, output_dict=True
+        actual, predicted,
+        zero_division=0,
+        output_dict=True
+    )
+
+    class_labels = sorted(set(actual) | set(predicted))
+
+    matrix = confusion_matrix(
+        actual, predicted,
+        labels=class_labels
     )
 
     print("\n--- TerraSpectra Model Evaluation ---")
@@ -62,13 +77,19 @@ def evaluate_model(model, dataloader, device=None):
 
     print("\nClassification Report:")
     print(classification_report(
-        actual, predicted, zero_division=0
+        actual, predicted,
+        zero_division=0
     ))
+
+    print("\nConfusion Matrix:")
+    print(matrix)
 
     return {
         "accuracy": accuracy,
         "precision": precision,
         "recall": recall,
         "f1_score": f1,
-        "classification_report": report
+        "classification_report": report,
+        "confusion_matrix": matrix.tolist(),
+        "class_labels": class_labels
     }

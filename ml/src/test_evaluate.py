@@ -1,4 +1,3 @@
-
 import torch
 from torch.utils.data import TensorDataset, DataLoader
 
@@ -7,6 +6,7 @@ from evaluate import evaluate_model
 
 
 def test_evaluate_3dcnn():
+
     images = torch.rand(12, 1, 200, 16, 16)
     labels = torch.randint(0, 3, (12,))
 
@@ -21,3 +21,8 @@ def test_evaluate_3dcnn():
     assert 0 <= results["precision"] <= 1
     assert 0 <= results["recall"] <= 1
     assert 0 <= results["f1_score"] <= 1
+
+    matrix = results["confusion_matrix"]
+
+    assert len(matrix) == len(results["class_labels"])
+    assert sum(sum(row) for row in matrix) == 12
