@@ -102,3 +102,30 @@ def load_data():
 D = load_data()
 cube, wl, gt, good = D["cube"], D["wl"], D["gt"], D["good"]
 B, H, W = cube.shape
+# ============================================================
+# DAY 5: Metadata inspection
+# ============================================================
+print("\n===== DAY 5: Metadata inspection =====")
+meta = {
+    "dataset": D["name"],
+    "shape_BHW": [int(B), int(H), int(W)],
+    "dtype": str(cube.dtype),
+    "wavelength_min_nm": float(wl.min()),
+    "wavelength_max_nm": float(wl.max()),
+    "avg_band_spacing_nm": float(np.mean(np.diff(wl))),
+    "nan_percent": round(float(np.isnan(cube).mean() * 100), 4),
+    "value_min": float(np.nanmin(cube)),
+    "value_max": float(np.nanmax(cube)),
+    "value_mean": float(np.nanmean(cube)),
+    "n_good_bands_flagged": int(good.sum()),
+    "memory_MB": round(cube.nbytes / 1e6, 1),
+}
+meta.update(D["meta"])
+if gt is not None:
+    cl, cn = np.unique(gt, return_counts=True)
+    meta["classes"] = {int(a): int(b) for a, b in zip(cl, cn)}
+with open("data/metadata/scene_metadata.json", "w") as f:
+    json.dump(meta, f, indent=2)
+pd.DataFrame({"band_index": np.arange(B), "wavelength_nm": wl, "good_band": good}).to_csv(
+    "data/metadata/wavelengths.csv", index=False)
+print(json.dumps({k: v for k, v in meta.items() if k not in ("attrs",)}, indent=2))
