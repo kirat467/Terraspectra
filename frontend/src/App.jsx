@@ -5,6 +5,7 @@ import { BitmapLayer, GeoJsonLayer, TextLayer } from "@deck.gl/layers";
 import Sidebar from "./components/Sidebar.jsx";
 import MapControls from "./components/MapControls.jsx";
 import RiskLegend from "./components/RiskLegend.jsx";
+import Timeline from "./components/Timeline.jsx";
 import { fitFarm, fitField, fmtAcres, fmtDate } from "./lib/geo.js";
 import { cellAt, riskImage, riskLabel } from "./lib/risk.js";
 
@@ -17,7 +18,9 @@ const getJson = (url) => fetch(url).then((r) => { if (!r.ok) throw new Error(`${
 export default function App() {
   const [meta, setMeta] = useState(null);
   const [fieldData, setFieldData] = useState(null);
-  const [risk, setRisk] = useState(null);
+  const [scans, setScans] = useState(null);       // one risk map per scan date
+  const [index, setIndex] = useState(0);          // which scan is showing
+  const [history, setHistory] = useState(null);   // risk_index.json: acres over time and spectral signals
   const [error, setError] = useState(null);
   const [viewState, setViewState] = useState(null);
   const [selected, setSelected] = useState(null);
@@ -32,8 +35,8 @@ export default function App() {
   useEffect(() => {
     Promise.all([getJson(`${DATA}farm_meta.json`), getJson(`${DATA}farm_fields.geojson`), getJson(`${DATA}risk/risk_index.json`)])
       .then(async ([m, f, idx]) => {
-        const latest = await getJson(`${DATA}risk/risk_${idx.latest}.json`);
-        setMeta(m); setFieldData(f); setRisk(latest);
+        const maps = await Promise.all(idx.dates.map((d) => getJson(`${DATA}risk/risk_${d}.json`)));
+        setMeta(m); setFieldData(f); setHistory(idx); setScans(maps); setIndex(maps.length - 1);
       })
       .catch((e) => setError(String(e.message || e)));
   }, []);
@@ -77,7 +80,9 @@ export default function App() {
     fly({ longitude: z.center[0], latitude: z.center[1], zoom: 16.8, pitch: 0, bearing: 0 });
   }, [fly]);
 
-  const image = useMemo(() => (risk ? riskImage(risk.risk) : null), [risk]);
+  const risk = scans ? scans[index] : null;
+  const images = useMemo(() => (scans ? scans.map((m) => riskImage(m.risk)) : null), [scans]);   // drawn once, so stepping through dates is instant
+  const image = images ? images[index] : null;
   const cell = cursor ? cellAt(risk, cursor[0], cursor[1]) : null;
   const detailed = viewState ? viewState.zoom >= 15.3 : false;
 
@@ -122,7 +127,7 @@ export default function App() {
       </div>
     );
   }
-  if (!meta || !risk) return <div className="state"><h1>TerraSpectra</h1><p className="muted">Loading farm data…</p></div>;
+  if (!meta || !risk || !history) return <div className="state"><h1>TerraSpectra</h1><p className="muted">Loading farm data…</p></div>;
 
   const hoverFeature = hover ? features.find((f) => f.properties.name === hover.name) : null;
   const hoverStats = hoverFeature ? risk.fields.find((f) => f.name === hoverFeature.properties.name) : null;
@@ -141,7 +146,7 @@ export default function App() {
         </div>
       </header>
 
-      <Sidebar meta={meta} fields={features} risk={risk} selected={selected} hovered={hover?.name} onSelect={select} onZone={flyToZone} layers={layers} setLayers={setLayers} />
+      <Sidebar meta={meta} fields={features} risk={risk} prevRisk={index > 0 ? scans[index - 1] : null} history={history} index={index} onIndex={setIndex} selected={selected} hovered={hover?.name} onSelect={select} onZone={flyToZone} layers={layers} setLayers={setLayers} />
 
       <main className="map" ref={mapBox}>
         {viewState && (
@@ -170,6 +175,8 @@ export default function App() {
           </div>
         )}
       </main>
+
+      <Timeline dates={history.dates} index={index} onIndex={setIndex} />
     </div>
   );
 }
