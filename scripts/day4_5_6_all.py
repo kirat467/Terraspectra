@@ -58,3 +58,47 @@ for p in glob.glob("data/raw/**/*", recursive=True):
 inv = pd.DataFrame(rows)
 inv.to_csv("data/metadata/raw_inventory.csv", index=False)
 print(inv.to_string(index=False) if len(inv) else "data/raw me koi file nahi mili")
+# ============================================================
+# Loader: EMIT .nc ya Indian Pines
+# ============================================================
+
+
+def load_data():
+    nc_files = glob.glob("data/raw/emit/*.nc")
+    if nc_files:
+        import xarray as xr
+        p = nc_files[0]
+        print("Using EMIT scene:", p)
+        ds = xr.open_dataset(p)
+        refl = ds["reflectance"]                       # (downtrack, crosstrack, bands)
+        bp = xr.open_dataset(p, group="sensor_band_parameters")
+        wl = bp["wavelengths"].values.astype("float32")
+        good = bp["good_wavelengths"].values.astype(bool) if "good_wavelengths" in bp else np.ones(len(wl), bool)
+        H, W = refl.shape[0], refl.shape[1]
+        r0, c0 = max(0, H // 2 - CROP_SIZE // 2), max(0, W // 2 - CROP_SIZE // 2)
+        sub = refl[r0:r0 + CROP_SIZE, c0:c0 + CROP_SIZE, :].values.astype("float32")
+        sub[sub <= -9990] = np.nan
+        cube = np.transpose(sub, (2, 0, 1))
+        return dict(name=os.path.basename(p), cube=cube, wl=wl, gt=None, good=good,
+                    meta={"sensor": "EMIT", "full_shape_HWB": [int(H), int(W), int(refl.shape[2])],
+                          "crop_origin_rc": [int(r0), int(c0)], "attrs": {k: str(v) for k, v in list(ds.attrs.items())[:15]}})
+    # fallback: Indian Pines
+    cp, gp = "data/interim/indian_pines_cube.npy", "data/interim/indian_pines_gt.npy"
+    if os.path.exists(cp):
+        cube, gt = np.load(cp), np.load(gp)
+    else:
+        mp = "data/raw/indian_pines/Indian_pines_corrected.mat"
+        gpm = "data/raw/indian_pines/Indian_pines_gt.mat"
+        if not os.path.exists(mp):
+            raise SystemExit("Indian Pines bhi nahi mila. Pehle day2_day3_all.py chalao.")
+        cube = np.transpose(sio.loadmat(mp)["indian_pines_corrected"], (2, 0, 1)).astype("float32")
+        gt = sio.loadmat(gpm)["indian_pines_gt"].astype("int32")
+    wl = np.linspace(400, 2500, cube.shape[0]).astype("float32")   # approx wavelengths
+    return dict(name="Indian_Pines", cube=cube.astype("float32"), wl=wl, gt=gt,
+                good=np.ones(cube.shape[0], bool),
+                meta={"sensor": "AVIRIS (Indian Pines)", "note": "wavelengths approximate (linspace 400-2500nm)"})
+
+
+D = load_data()
+cube, wl, gt, good = D["cube"], D["wl"], D["gt"], D["good"]
+B, H, W = cube.shape
