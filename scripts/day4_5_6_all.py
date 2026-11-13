@@ -32,3 +32,29 @@ def md5(path, chunk=1 << 20):
             h.update(b)
     return h.hexdigest()
 
+# ============================================================
+# DAY 4: Download + inventory
+# ============================================================
+print("\n===== DAY 4: Data download + inventory =====")
+
+if DOWNLOAD_EMIT:
+    try:
+        import earthaccess
+        earthaccess.login()
+        res = earthaccess.search_data(short_name="EMITL2ARFL", bounding_box=BBOX,
+                                      temporal=DATE_RANGE, count=5)
+        print("Scenes mile:", len(res))
+        if res:
+            earthaccess.download(res[:1], "data/raw/emit")
+    except Exception as e:
+        print("EMIT download fail:", e)
+
+rows = []
+for p in glob.glob("data/raw/**/*", recursive=True):
+    if os.path.isfile(p) and not p.endswith(".gitkeep"):
+        size_mb = os.path.getsize(p) / 1e6
+        rows.append({"file": p.replace("\\", "/"), "size_MB": round(size_mb, 2),
+                     "md5": md5(p) if size_mb < 500 else "skipped(large)"})
+inv = pd.DataFrame(rows)
+inv.to_csv("data/metadata/raw_inventory.csv", index=False)
+print(inv.to_string(index=False) if len(inv) else "data/raw me koi file nahi mili")
