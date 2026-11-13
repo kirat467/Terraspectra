@@ -1,6 +1,7 @@
 import { scaleBar } from "../lib/geo.js";
+import { riskLabel } from "../lib/risk.js";
 
-export default function MapControls({ viewState, cursor, onZoom, onReset }) {
+export default function MapControls({ viewState, cursor, cursorRisk, onZoom, onReset }) {
   const bar = scaleBar(viewState.zoom, viewState.latitude);
   return (
     <>
@@ -13,7 +14,10 @@ export default function MapControls({ viewState, cursor, onZoom, onReset }) {
       </div>
       <div className="map-readout">
         <div className="scalebar" style={{ width: bar.px }}><span>{bar.label}</span></div>
-        <div className="coords num">{cursor ? `${cursor[1].toFixed(5)}° N  ${cursor[0].toFixed(5)}° E` : "Move the pointer over the map"}</div>
+        <div className="coords num">
+          {cursor ? `${cursor[1].toFixed(5)}° N  ${cursor[0].toFixed(5)}° E` : "Move the pointer over the map"}
+          {cursorRisk != null && <b> · risk {cursorRisk.toFixed(2)} ({riskLabel(cursorRisk)})</b>}
+        </div>
       </div>
       <div className="sim-badge">Simulated data</div>
     </>

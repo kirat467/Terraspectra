@@ -11,7 +11,7 @@ export function fitFarm(meta, width, height) {
   const lat = (south + north) / 2;
   const widthM = (east - west) * 111320 * Math.cos((lat * Math.PI) / 180);
   const heightM = (north - south) * 111320;
-  const usable = Math.max(200, Math.min(width, height) - 48);
+  const usable = Math.max(200, Math.min(width, height) - 96);   // leaves room for the legend above the farm
   const zoom = Math.log2((78271.517 * Math.cos((lat * Math.PI) / 180) * usable) / Math.max(widthM, heightM));
   return { longitude: (west + east) / 2, latitude: lat, zoom, pitch: 0, bearing: 0 };
 }

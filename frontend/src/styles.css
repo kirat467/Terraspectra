@@ -87,3 +87,22 @@ input[type=range] { flex: 1; min-width: 80px; accent-color: var(--accent); }
   .brand small, .chip:first-child { display: none; }
   .topbar { padding: 0 16px; }
 }
+
+/* ---- risk layer ---- */
+.panel h4 { margin: 16px 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; }
+.risk-panel { border-color: rgba(232, 98, 40, .45); }
+.stats dd.bad { color: #f07c52; }
+.zones { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+.zone-row { width: 100%; display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 7px 8px; border: 1px solid transparent; border-radius: 8px; background: none; cursor: pointer; text-align: left; }
+.zone-row:hover { background: var(--panel2); border-color: var(--line); }
+.zone-id { width: 30px; height: 26px; border-radius: 7px; display: grid; place-items: center; font-size: 12px; font-weight: 700; color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, .4); }
+.zone-row .num { color: var(--ink); font-weight: 600; font-size: 13px; }
+.risk-chip { min-width: 44px; text-align: center; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, .45); }
+.field-row { grid-template-columns: 14px minmax(0, 1fr) auto; }
+.dates li.current { background: rgba(155, 210, 90, .16); box-shadow: inset 0 0 0 1px rgba(155, 210, 90, .55); }
+.legend { position: absolute; left: 16px; top: 12px; z-index: 5; width: 250px; padding: 10px 12px 9px; background: rgba(21, 27, 24, .9); border: 1px solid var(--line); border-radius: 10px; backdrop-filter: blur(4px); }
+.legend-title { font-size: 12px; font-weight: 600; margin-bottom: 8px; }
+.legend-bar { height: 10px; border-radius: 5px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .15); }
+.legend-ticks { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 4px; }
+.coords b { color: var(--ink); font-weight: 600; }
+@media (max-width: 900px) { .legend { width: 200px; } .chip:nth-child(2) { display: none; } }
