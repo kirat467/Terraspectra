@@ -87,3 +87,29 @@ else:
 
 keep = np.setdiff1d(np.arange(cube.shape[0]), bad_water)
 cube, wl_k = cube[keep], wl[keep]
+# 3) noisy band detection: deviation of each band from the average of its neighbours
+rng = np.random.default_rng(42)
+flat = cube.reshape(cube.shape[0], -1)
+valid_px = np.where(~np.isnan(flat).any(axis=0))[0]
+pick = rng.choice(valid_px, size=min(5000, len(valid_px)), replace=False)
+S = flat[:, pick]
+local_noise = np.zeros(S.shape[0])
+local_noise[1:-1] = np.abs(S[1:-1] - 0.5 * (S[:-2] + S[2:])).mean(axis=1)
+local_noise[0], local_noise[-1] = local_noise[1], local_noise[-2]
+z = (local_noise - local_noise.mean()) / (local_noise.std() + 1e-12)
+noisy = np.where(z > 3)[0]
+print("Noisy bands (z>3):", len(noisy), "->", wl_k[noisy].round(0).tolist())
+keep2 = np.setdiff1d(np.arange(cube.shape[0]), noisy)
+cube, wl_c = cube[keep2], wl_k[keep2]
+
+# plot removed bands
+plt.figure(figsize=(10, 4))
+full_mean = np.nanmean(D["cube"].reshape(B0, -1), axis=1)
+full_mean = full_mean / (PP["reflectance_scale"] if np.nanmax(D["cube"]) > 2 else 1)
+plt.plot(wl, full_mean, color="gray", label="original mean spectrum")
+for b in bad_water:
+    plt.axvline(wl[b], color="red", alpha=0.15)
+plt.plot(wl_c, np.nanmean(cube.reshape(cube.shape[0], -1), axis=1), color="green", label="kept bands")
+plt.xlabel("Wavelength (nm)"); plt.ylabel("Mean value"); plt.title("Bad band removal (red = removed)")
+plt.legend(); plt.tight_layout(); plt.savefig("reports/figures/d7_bad_band_removal.png", dpi=150); plt.close()
+print(f"Bands: {B0} -> {cube.shape[0]}")
