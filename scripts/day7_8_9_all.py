@@ -178,3 +178,11 @@ report = {
     "value_max": float(np.nanmax(cube)),
 }
 print(json.dumps(report, indent=2))
+# spot-check spectra plot
+ok = np.where(~np.isnan(cube).any(axis=0))
+sel_idx = rng.choice(len(ok[0]), size=min(8, len(ok[0])), replace=False)
+plt.figure(figsize=(10, 4))
+for k in sel_idx:
+    plt.plot(wl_c, cube[:, ok[0][k], ok[1][k]], alpha=0.7)
+plt.xlabel("Wavelength (nm)"); plt.ylabel("Reflectance"); plt.title("Random pixel spectra after cleaning (should look smooth)")
+plt.tight_layout(); plt.savefig("reports/figures/d8_spectra_check.png", dpi=150); plt.close()
