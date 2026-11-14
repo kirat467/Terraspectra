@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from pathlib import Path
+import copy
 
 
 def train_model(
@@ -10,12 +11,13 @@ def train_model(
     epochs=10,
     batch_size=4,
     lr=0.001,
-    validation_dataset=None
+    validation_dataset=None,
+    patience=3
 ):
     if len(dataset) == 0:
         raise ValueError("Training dataset is empty")
 
-    if epochs <= 0 or batch_size <= 0 or lr <= 0:
+    if epochs <= 0 or batch_size <= 0 or lr <= 0 or patience <= 0:
         raise ValueError("Invalid training parameters")
 
     if validation_dataset is not None and len(validation_dataset) == 0:
@@ -46,6 +48,10 @@ def train_model(
 
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+
+    best_loss = float("inf")
+    best_weights = copy.deepcopy(model.state_dict())
+    wait = 0
 
     for epoch in range(epochs):
         model.train()
@@ -99,10 +105,7 @@ def train_model(
                     val_loss += loss.item()
 
                     predictions = outputs.argmax(dim=1)
-                    val_correct += (
-                        predictions == labels
-                    ).sum().item()
-
+                    val_correct += (predictions == labels).sum().item()
                     val_total += labels.size(0)
 
             avg_val_loss = val_loss / len(val_loader)
@@ -112,6 +115,23 @@ def train_model(
                 f"Validation Loss: {avg_val_loss:.4f} | "
                 f"Validation Accuracy: {val_accuracy:.2f}%"
             )
+
+            if avg_val_loss < best_loss:
+                best_loss = avg_val_loss
+                best_weights = copy.deepcopy(model.state_dict())
+                wait = 0
+                print("Best model updated!")
+            else:
+                wait += 1
+                print(f"Early stopping patience: {wait}/{patience}")
+
+            if wait >= patience:
+                print("Early stopping triggered!")
+                break
+
+    if val_loader is not None:
+        model.load_state_dict(best_weights)
+        print("Best model weights restored!")
 
     return model
 
