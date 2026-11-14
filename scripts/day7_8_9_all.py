@@ -113,3 +113,21 @@ plt.plot(wl_c, np.nanmean(cube.reshape(cube.shape[0], -1), axis=1), color="green
 plt.xlabel("Wavelength (nm)"); plt.ylabel("Mean value"); plt.title("Bad band removal (red = removed)")
 plt.legend(); plt.tight_layout(); plt.savefig("reports/figures/d7_bad_band_removal.png", dpi=150); plt.close()
 print(f"Bands: {B0} -> {cube.shape[0]}")
+# 4) cloud / shadow mask (heuristic, EMIT only)
+H, W = cube.shape[1:]
+cloud = np.zeros((H, W), bool)
+shadow = np.zeros((H, W), bool)
+if sensor == "EMIT":
+    def sel(lo, hi):
+        return (wl_c >= lo) & (wl_c <= hi)
+    vis = np.nanmean(cube[sel(450, 690)], axis=0)
+    nir = np.nanmean(cube[sel(800, 900)], axis=0)
+    cloud = binary_dilation(np.nan_to_num(vis) > 0.30, iterations=2)
+    shadow = binary_dilation(np.nan_to_num(nir, nan=1) < 0.03, iterations=1)
+    cube[:, cloud | shadow] = np.nan
+    print(f"Cloud pixels: {cloud.mean()*100:.2f}% | shadow pixels: {shadow.mean()*100:.2f}% (heuristic mask)")
+    print("Tip: for exact masks use the EMIT L2A MASK product and replace this heuristic.")
+else:
+    print("Indian Pines: no cloud mask needed")
+np.save("data/interim/mask_cloud.npy", cloud)
+np.save("data/interim/mask_shadow.npy", shadow)
