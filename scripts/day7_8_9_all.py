@@ -63,3 +63,12 @@ D = load_data()
 cube, wl, gt, good, sensor = D["cube"], D["wl"], D["gt"], D["good"], D["sensor"]
 B0 = cube.shape[0]
 print(f"Loaded {D['name']} | shape (B,H,W) = {cube.shape}")
+# ============================================================
+# DAY 7: bad bands, nodata, cloud/shadow mask
+# ============================================================
+print("\n===== DAY 7: Bad bands + masking =====")
+
+# 1) reflectance scaling (only if values look like integer DN)
+if np.nanmax(cube) > 2:
+    cube = cube / PP["reflectance_scale"]
+    print("Scaled by", PP["reflectance_scale"])
