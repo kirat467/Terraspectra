@@ -47,13 +47,26 @@ def train_model(
         )
 
     criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+
+    optimizer = torch.optim.Adam(
+        model.parameters(),
+        lr=lr
+    )
+
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer,
+        mode="min",
+        factor=0.5,
+        patience=2,
+        min_lr=0.00001
+    )
 
     best_loss = float("inf")
     best_weights = copy.deepcopy(model.state_dict())
     wait = 0
 
     for epoch in range(epochs):
+
         model.train()
 
         total_loss = 0
@@ -61,6 +74,7 @@ def train_model(
         total = 0
 
         for images, labels in train_loader:
+
             images = images.to(device)
             labels = labels.to(device).long()
 
@@ -75,6 +89,7 @@ def train_model(
             total_loss += loss.item()
 
             predictions = outputs.argmax(dim=1)
+
             correct += (predictions == labels).sum().item()
             total += labels.size(0)
 
@@ -88,6 +103,7 @@ def train_model(
         )
 
         if val_loader is not None:
+
             model.eval()
 
             val_loss = 0
@@ -95,7 +111,9 @@ def train_model(
             val_total = 0
 
             with torch.no_grad():
+
                 for images, labels in val_loader:
+
                     images = images.to(device)
                     labels = labels.to(device).long()
 
@@ -105,10 +123,15 @@ def train_model(
                     val_loss += loss.item()
 
                     predictions = outputs.argmax(dim=1)
-                    val_correct += (predictions == labels).sum().item()
+
+                    val_correct += (
+                        predictions == labels
+                    ).sum().item()
+
                     val_total += labels.size(0)
 
             avg_val_loss = val_loss / len(val_loader)
+
             val_accuracy = 100 * val_correct / val_total
 
             print(
@@ -116,29 +139,51 @@ def train_model(
                 f"Validation Accuracy: {val_accuracy:.2f}%"
             )
 
+            scheduler.step(avg_val_loss)
+
+            print(
+                "Current Learning Rate:",
+                optimizer.param_groups[0]["lr"]
+            )
+
             if avg_val_loss < best_loss:
+
                 best_loss = avg_val_loss
                 best_weights = copy.deepcopy(model.state_dict())
                 wait = 0
+
                 print("Best model updated!")
+
             else:
+
                 wait += 1
-                print(f"Early stopping patience: {wait}/{patience}")
+
+                print(
+                    f"Early stopping patience: {wait}/{patience}"
+                )
 
             if wait >= patience:
+
                 print("Early stopping triggered!")
                 break
 
     if val_loader is not None:
+
         model.load_state_dict(best_weights)
+
         print("Best model weights restored!")
 
     return model
 
 
 def save_model(model, path="ml/models/3dcnn.pth"):
+
     save_path = Path(path)
-    save_path.parent.mkdir(parents=True, exist_ok=True)
+
+    save_path.parent.mkdir(
+        parents=True,
+        exist_ok=True
+    )
 
     torch.save(model.state_dict(), save_path)
 
