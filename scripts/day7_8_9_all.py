@@ -72,3 +72,18 @@ print("\n===== DAY 7: Bad bands + masking =====")
 if np.nanmax(cube) > 2:
     cube = cube / PP["reflectance_scale"]
     print("Scaled by", PP["reflectance_scale"])
+# 2) bad band removal
+if sensor == "INDIAN_PINES":
+    # this version already has water bands removed and wavelengths are approximate,
+    # so wavelength-range removal is skipped on purpose
+    bad_water = np.array([], dtype=int)
+    print("Indian Pines: wavelength-range removal skipped (water bands already removed in dataset)")
+else:
+    in_range = np.zeros(len(wl), bool)
+    for lo, hi in BAD_RANGES:
+        in_range |= (wl >= lo) & (wl <= hi)
+    bad_water = np.where(in_range | ~good)[0]
+    print("Water-absorption / flagged bands:", len(bad_water))
+
+keep = np.setdiff1d(np.arange(cube.shape[0]), bad_water)
+cube, wl_k = cube[keep], wl[keep]
