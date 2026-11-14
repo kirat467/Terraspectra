@@ -9,7 +9,6 @@ def predict_crop(
     device=None,
     confidence_threshold=60.0
 ):
-
     if not class_names:
         raise ValueError("Class names cannot be empty")
 
@@ -17,7 +16,7 @@ def predict_crop(
         raise ValueError("Invalid image tensor")
 
     if not 0 <= confidence_threshold <= 100:
-        raise ValueError("Confidence threshold must be between 0 and 100")
+        raise ValueError("Invalid confidence threshold")
 
     device = device or torch.device(
         "cuda" if torch.cuda.is_available() else "cpu"
@@ -25,11 +24,9 @@ def predict_crop(
 
     model = model.to(device)
     model.eval()
-
     image = image.to(device)
 
     with torch.inference_mode():
-
         outputs = model(image)
 
         if outputs.ndim != 2:
@@ -39,24 +36,41 @@ def predict_crop(
             raise ValueError("Class names do not match model outputs")
 
         probabilities = F.softmax(outputs, dim=1)
-        confidence, prediction = torch.max(probabilities, dim=1)
+
+        top_count = min(3, len(class_names))
+        top_probs, top_indices = torch.topk(
+            probabilities, top_count, dim=1
+        )
 
     results = []
 
-    for i in range(len(prediction)):
+    for i in range(len(top_indices)):
+        top_predictions = []
 
-        class_id = prediction[i].item()
-        confidence_percent = round(confidence[i].item() * 100, 2)
+        for j in range(top_count):
+            class_id = top_indices[i][j].item()
+            confidence = round(top_probs[i][j].item() * 100, 2)
 
-        is_confident = confidence_percent >= confidence_threshold
+            top_predictions.append({
+                "class_id": class_id,
+                "disease": class_names[class_id],
+                "confidence": confidence
+            })
+
+        best = top_predictions[0]
 
         results.append({
-            "class_id": class_id,
-            "prediction": class_names[class_id],
-            "predicted_class": class_names[class_id],
-            "confidence": confidence_percent,
-            "status": "Confident" if is_confident else "Uncertain",
-            "review_required": not is_confident
+            "class_id": best["class_id"],
+            "prediction": best["disease"],
+            "predicted_class": best["disease"],
+            "confidence": best["confidence"],
+            "status": (
+                "Confident"
+                if best["confidence"] >= confidence_threshold
+                else "Uncertain"
+            ),
+            "review_required": best["confidence"] < confidence_threshold,
+            "top_predictions": top_predictions
         })
 
     return results
