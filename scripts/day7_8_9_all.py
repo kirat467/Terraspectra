@@ -197,3 +197,41 @@ np.save("data/interim/wavelengths_clean.npy", wl_c)
 pd.DataFrame({"band": np.arange(len(wl_c)), "wavelength_nm": wl_c}).to_csv(
     "data/metadata/wavelengths_clean.csv", index=False)
 json.dump(report, open("data/metadata/quality_report.json", "w"), indent=2)
+# ============================================================
+# DAY 9: reprojection + resampling
+# ============================================================
+print("\n===== DAY 9: Reprojection / resampling =====")
+B, H, W = cube.shape
+if sensor == "EMIT":
+    src_crs, res = "EPSG:32645", 60.0
+    src_tf = from_origin(500000, 2840000, res, res)
+else:
+    src_crs, res = "EPSG:32616", 20.0
+    src_tf = from_origin(500000, 4480000, res, res)
+print(f"NOTE: placeholder georeference used (CRS {src_crs}, {res} m). Real scenes: use the scene's own CRS/transform.")
+
+src_path = "data/interim/cleaned_native.tif"
+with rasterio.open(src_path, "w", driver="GTiff", height=H, width=W, count=B, dtype="float32",
+                   crs=src_crs, transform=src_tf, nodata=np.nan, compress="deflate") as dst:
+    dst.write(cube.astype("float32"))
+    for i in range(B):
+        dst.set_band_description(i + 1, f"{wl_c[i]:.1f}nm")
+
+dst_crs = PP["target_crs"]
+tres = PP["target_resolution"]
+with rasterio.open(src_path) as src:
+    dtf, dw, dh = calculate_default_transform(src.crs, dst_crs, src.width, src.height, *src.bounds, resolution=tres)
+    out = np.full((B, dh, dw), np.nan, dtype="float32")
+    for i in range(B):
+        reproject(source=src.read(i + 1), destination=out[i],
+                  src_transform=src.transform, src_crs=src.crs,
+                  dst_transform=dtf, dst_crs=dst_crs,
+                  src_nodata=np.nan, dst_nodata=np.nan, resampling=Resampling.bilinear)
+
+out_path = "data/interim/cleaned_reprojected.tif"
+with rasterio.open(out_path, "w", driver="GTiff", height=dh, width=dw, count=B, dtype="float32",
+                   crs=dst_crs, transform=dtf, nodata=np.nan, compress="deflate") as dst:
+    dst.write(out)
+    for i in range(B):
+        dst.set_band_description(i + 1, f"{wl_c[i]:.1f}nm")
+print(f"Saved {out_path} | CRS {dst_crs} | shape (B,H,W) = {out.shape} | pixel size {tres} deg")
