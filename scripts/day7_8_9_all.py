@@ -251,3 +251,14 @@ if gt is not None:
     ax[1].set_title("Labels overlay (alignment check)")
     plt.tight_layout(); plt.savefig("reports/figures/d9_alignment_check.png", dpi=150); plt.close()
 print(lab_info)
+# equivalent GDAL command for the report
+with open("scripts/reproject_command.txt", "w") as f:
+    f.write(f"gdalwarp -t_srs {dst_crs} -tr {tres} {tres} -r bilinear -srcnodata nan -dstnodata nan "
+            f"data/interim/cleaned_native.tif data/interim/cleaned_reprojected_gdal.tif\n")
+
+with open("docs/day7_9_summary.md", "w", encoding="utf-8") as f:
+    f.write(f"# Day 7-9 Summary ({date.today()})\n\n- Dataset: {D['name']}\n")
+    for k, v in report.items():
+        f.write(f"- {k}: {v}\n")
+    f.write(f"- Reprojected to {dst_crs} at {tres} deg, bilinear (labels: nearest)\n")
+    f.write("- Georeference was a PLACEHOLDER for test data; replace with real scene CRS/transform\n")
