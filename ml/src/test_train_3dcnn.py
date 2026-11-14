@@ -1,7 +1,8 @@
 import torch
 from torch.utils.data import TensorDataset
+
 from model_3dcnn import Crop3DCNN
-from train_3dcnn import train_model, save_model
+from train_3dcnn import train_model, save_model, set_seed
 
 
 def test_train_model(tmp_path):
@@ -12,7 +13,8 @@ def test_train_model(tmp_path):
     model = Crop3DCNN(num_classes=3)
 
     trained_model = train_model(
-        model, dataset,
+        model,
+        dataset,
         epochs=2,
         batch_size=2,
         checkpoint_path=tmp_path / "checkpoint.pth"
@@ -40,21 +42,37 @@ def test_resume_training(tmp_path):
     model = Crop3DCNN(num_classes=3)
 
     train_model(
-        model, dataset,
+        model,
+        dataset,
         epochs=1,
         batch_size=2,
         checkpoint_path=checkpoint
     )
 
     resumed_model = train_model(
-        model, dataset,
+        model,
+        dataset,
         epochs=2,
         batch_size=2,
         checkpoint_path=checkpoint,
         resume=True
     )
 
-    saved = torch.load(checkpoint, map_location="cpu", weights_only=False)
+    saved = torch.load(
+        checkpoint,
+        map_location="cpu",
+        weights_only=False
+    )
 
     assert isinstance(resumed_model, Crop3DCNN)
     assert saved["epoch"] == 1
+
+
+def test_set_seed():
+    set_seed(42)
+    first = torch.rand(5)
+
+    set_seed(42)
+    second = torch.rand(5)
+
+    assert torch.equal(first, second)

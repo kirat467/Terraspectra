@@ -1,8 +1,23 @@
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader
-from pathlib import Path
+import random
+import numpy as np
 import copy
+
+from pathlib import Path
+from torch.utils.data import DataLoader
+
+
+def set_seed(seed=42):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
 
 def train_model(
@@ -14,7 +29,8 @@ def train_model(
     validation_dataset=None,
     patience=3,
     checkpoint_path="ml/models/terraspectra_checkpoint.pth",
-    resume=False
+    resume=False,
+    seed=42
 ):
     if len(dataset) == 0:
         raise ValueError("Training dataset is empty")
@@ -25,42 +41,70 @@ def train_model(
     if validation_dataset is not None and len(validation_dataset) == 0:
         raise ValueError("Validation dataset is empty")
 
+    set_seed(seed)
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Training device:", device)
 
     model = model.to(device)
 
-    train_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+    generator = torch.Generator()
+    generator.manual_seed(seed)
+
+    train_loader = DataLoader(
+        dataset,
+        batch_size=batch_size,
+        shuffle=True,
+        generator=generator
+    )
 
     val_loader = None
+
     if validation_dataset is not None:
-        val_loader = DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
+        val_loader = DataLoader(
+            validation_dataset,
+            batch_size=batch_size,
+            shuffle=False
+        )
 
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode="min", factor=0.5, patience=2, min_lr=0.00001
+        optimizer,
+        mode="min",
+        factor=0.5,
+        patience=2,
+        min_lr=0.00001
     )
 
     best_loss = float("inf")
     best_weights = copy.deepcopy(model.state_dict())
     wait = 0
     start_epoch = 0
+
     checkpoint = Path(checkpoint_path)
 
     if resume and checkpoint.exists():
-        saved = torch.load(checkpoint, map_location=device, weights_only=False)
+        saved = torch.load(
+            checkpoint,
+            map_location=device,
+            weights_only=False
+        )
+
         model.load_state_dict(saved["model_state_dict"])
         optimizer.load_state_dict(saved["optimizer_state_dict"])
         scheduler.load_state_dict(saved["scheduler_state_dict"])
+
         best_loss = saved["best_loss"]
         best_weights = saved["best_weights"]
         wait = saved["wait"]
         start_epoch = saved["epoch"] + 1
+
         print("Checkpoint loaded. Resuming training...")
 
     for epoch in range(start_epoch, epochs):
+
         model.train()
         total_loss = 0
         correct = 0
@@ -71,12 +115,15 @@ def train_model(
             labels = labels.to(device).long()
 
             optimizer.zero_grad()
+
             outputs = model(images)
             loss = criterion(outputs, labels)
+
             loss.backward()
             optimizer.step()
 
             total_loss += loss.item()
+
             predictions = outputs.argmax(dim=1)
             correct += (predictions == labels).sum().item()
             total += labels.size(0)
@@ -103,6 +150,7 @@ def train_model(
 
                     outputs = model(images)
                     loss = criterion(outputs, labels)
+
                     val_loss += loss.item()
 
                     predictions = outputs.argmax(dim=1)
@@ -137,7 +185,8 @@ def train_model(
             "scheduler_state_dict": scheduler.state_dict(),
             "best_loss": best_loss,
             "best_weights": best_weights,
-            "wait": wait
+            "wait": wait,
+            "seed": seed
         }, checkpoint)
 
         print("Checkpoint saved:", checkpoint)
@@ -156,5 +205,7 @@ def train_model(
 def save_model(model, path="ml/models/3dcnn.pth"):
     save_path = Path(path)
     save_path.parent.mkdir(parents=True, exist_ok=True)
+
     torch.save(model.state_dict(), save_path)
+
     print("Model saved successfully:", save_path)
