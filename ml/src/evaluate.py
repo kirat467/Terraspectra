@@ -33,7 +33,6 @@ def evaluate_model(model, dataloader, device=None):
         for images, labels in dataloader:
 
             images = images.to(device)
-
             outputs = model(images)
 
             if num_classes is None:
@@ -43,7 +42,6 @@ def evaluate_model(model, dataloader, device=None):
                 raise ValueError("Inconsistent number of model classes")
 
             probabilities = torch.softmax(outputs, dim=1)
-
             confidence, predictions = probabilities.max(dim=1)
 
             actual.extend(labels.cpu().numpy().tolist())
@@ -71,24 +69,21 @@ def evaluate_model(model, dataloader, device=None):
     accuracy = accuracy_score(actual, predicted)
 
     precision = precision_score(
-        actual,
-        predicted,
+        actual, predicted,
         labels=class_ids,
         average="weighted",
         zero_division=0
     )
 
     recall = recall_score(
-        actual,
-        predicted,
+        actual, predicted,
         labels=class_ids,
         average="weighted",
         zero_division=0
     )
 
     f1 = f1_score(
-        actual,
-        predicted,
+        actual, predicted,
         labels=class_ids,
         average="weighted",
         zero_division=0
@@ -114,6 +109,46 @@ def evaluate_model(model, dataloader, device=None):
         for class_id in class_ids
     }
 
+    # Per-class performance
+    per_class_metrics = {}
+
+    for class_id, class_name in enumerate(class_names):
+
+        class_data = report[class_name]
+
+        correct = int(matrix[class_id][class_id])
+        total = int(matrix[class_id].sum())
+        incorrect = total - correct
+
+        per_class_metrics[class_name] = {
+            "accuracy": correct / total if total else 0.0,
+            "precision": class_data["precision"],
+            "recall": class_data["recall"],
+            "f1_score": class_data["f1-score"],
+            "correct_predictions": correct,
+            "incorrect_predictions": incorrect,
+            "total_samples": total
+        }
+
+    # Find most confused disease pairs
+    confused_pairs = []
+
+    for actual_id in class_ids:
+        for predicted_id in class_ids:
+
+            if actual_id != predicted_id and matrix[actual_id][predicted_id] > 0:
+
+                confused_pairs.append({
+                    "actual_class": class_names[actual_id],
+                    "predicted_class": class_names[predicted_id],
+                    "count": int(matrix[actual_id][predicted_id])
+                })
+
+    confused_pairs.sort(
+        key=lambda item: item["count"],
+        reverse=True
+    )
+
     mean_confidence = sum(confidences) / len(confidences)
 
     print("\n--- TerraSpectra Model Evaluation ---")
@@ -121,6 +156,16 @@ def evaluate_model(model, dataloader, device=None):
     print("Precision:", precision)
     print("Recall:", recall)
     print("F1 Score:", f1)
+
+    print("\n--- Per-Class Performance ---")
+
+    for name, metrics in per_class_metrics.items():
+        print(f"\n{name}")
+        for metric, value in metrics.items():
+            print(f"{metric}: {value}")
+
+    print("\nMost Confused Disease Pairs:")
+    print(confused_pairs)
 
     print("\nPrediction Distribution:")
     print(prediction_counts)
@@ -151,5 +196,7 @@ def evaluate_model(model, dataloader, device=None):
         "class_labels": class_ids,
         "class_names": class_names,
         "prediction_counts": prediction_counts,
-        "mean_confidence": float(mean_confidence)
+        "mean_confidence": float(mean_confidence),
+        "per_class_metrics": per_class_metrics,
+        "confused_pairs": confused_pairs
     }
