@@ -131,3 +131,50 @@ else:
     print("Indian Pines: no cloud mask needed")
 np.save("data/interim/mask_cloud.npy", cloud)
 np.save("data/interim/mask_shadow.npy", shadow)
+# ============================================================
+# DAY 8: gap filling + quality checks
+# ============================================================
+print("\n===== DAY 8: Gap filling + quality checks =====")
+before = cube.copy()
+
+
+def fill_gaps(c, max_nan_frac=0.2):
+    B, H, W = c.shape
+    f = c.reshape(B, -1).copy()
+    frac = np.isnan(f).mean(axis=0)
+    partial = np.where((frac > 0) & (frac <= max_nan_frac))[0]
+    x = np.arange(B)
+    for i in partial:
+        col = f[:, i]
+        m = np.isnan(col)
+        col[m] = np.interp(x[m], x[~m], col[~m])
+    drop = frac > max_nan_frac
+    f[:, drop] = np.nan
+    return f.reshape(B, H, W), len(partial), int(drop.sum())
+
+
+cube, n_filled, n_dropped = fill_gaps(cube, cfg["dataset"]["max_nan_fraction"])
+cube = np.clip(cube, 0.0, 1.0)
+print(f"Pixels interpolated: {n_filled} | pixels dropped (too many NaN): {n_dropped}")
+
+
+def smoothness(c):
+    f = c.reshape(c.shape[0], -1)
+    f = f[:, ~np.isnan(f).any(axis=0)][:, :5000]
+    return float(np.abs(np.diff(f, n=2, axis=0)).mean())
+
+
+report = {
+    "bands_original": int(B0),
+    "bands_after_cleaning": int(cube.shape[0]),
+    "water_bands_removed": int(len(bad_water)),
+    "noisy_bands_removed": int(len(noisy)),
+    "nan_percent_final": round(float(np.isnan(cube).mean() * 100), 3),
+    "pixels_interpolated": int(n_filled),
+    "pixels_dropped": int(n_dropped),
+    "negative_values_before_clip_pct": round(float((before < 0).sum() / before.size * 100), 4),
+    "spectral_roughness": round(smoothness(cube), 6),
+    "value_min": float(np.nanmin(cube)),
+    "value_max": float(np.nanmax(cube)),
+}
+print(json.dumps(report, indent=2))
