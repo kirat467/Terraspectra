@@ -186,3 +186,14 @@ for k in sel_idx:
     plt.plot(wl_c, cube[:, ok[0][k], ok[1][k]], alpha=0.7)
 plt.xlabel("Wavelength (nm)"); plt.ylabel("Reflectance"); plt.title("Random pixel spectra after cleaning (should look smooth)")
 plt.tight_layout(); plt.savefig("reports/figures/d8_spectra_check.png", dpi=150); plt.close()
+# per-band NaN + mean after cleaning
+plt.figure(figsize=(10, 3.5))
+plt.plot(wl_c, np.isnan(cube).reshape(cube.shape[0], -1).mean(axis=1) * 100)
+plt.xlabel("Wavelength (nm)"); plt.ylabel("NaN %"); plt.title("NaN % per band (final)")
+plt.tight_layout(); plt.savefig("reports/figures/d8_nan_per_band.png", dpi=150); plt.close()
+
+np.save("data/interim/cleaned_cube.npy", cube.astype("float32"))
+np.save("data/interim/wavelengths_clean.npy", wl_c)
+pd.DataFrame({"band": np.arange(len(wl_c)), "wavelength_nm": wl_c}).to_csv(
+    "data/metadata/wavelengths_clean.csv", index=False)
+json.dump(report, open("data/metadata/quality_report.json", "w"), indent=2)
