@@ -235,3 +235,19 @@ with rasterio.open(out_path, "w", driver="GTiff", height=dh, width=dw, count=B, 
     for i in range(B):
         dst.set_band_description(i + 1, f"{wl_c[i]:.1f}nm")
 print(f"Saved {out_path} | CRS {dst_crs} | shape (B,H,W) = {out.shape} | pixel size {tres} deg")
+# labels: nearest-neighbour reproject (never bilinear for classes)
+lab_info = "no labels"
+if gt is not None:
+    gt_out = np.zeros((dh, dw), dtype="int32")
+    reproject(source=gt.astype("int32"), destination=gt_out, src_transform=src_tf, src_crs=src_crs,
+              dst_transform=dtf, dst_crs=dst_crs, resampling=Resampling.nearest, src_nodata=0, dst_nodata=0)
+    np.save("data/interim/gt_reprojected.npy", gt_out)
+    assert gt_out.shape == out.shape[1:], "label/image shape mismatch"
+    lab_info = f"labels reprojected, shape {gt_out.shape}"
+    fig, ax = plt.subplots(1, 2, figsize=(11, 5))
+    idx_g = int(np.argmin(np.abs(wl_c - 800)))
+    ax[0].imshow(out[idx_g], cmap="gray"); ax[0].set_title("Reprojected image (~800nm)")
+    ax[1].imshow(out[idx_g], cmap="gray"); ax[1].imshow(np.ma.masked_equal(gt_out, 0), cmap="nipy_spectral", alpha=0.5)
+    ax[1].set_title("Labels overlay (alignment check)")
+    plt.tight_layout(); plt.savefig("reports/figures/d9_alignment_check.png", dpi=150); plt.close()
+print(lab_info)
