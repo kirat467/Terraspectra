@@ -12,8 +12,7 @@ def test_train_model(tmp_path):
     model = Crop3DCNN(num_classes=3)
 
     trained_model = train_model(
-        model,
-        dataset,
+        model, dataset,
         epochs=2,
         batch_size=2,
         checkpoint_path=tmp_path / "checkpoint.pth"
@@ -30,3 +29,32 @@ def test_save_model(tmp_path):
     save_model(model, save_path)
 
     assert save_path.exists()
+
+
+def test_resume_training(tmp_path):
+    images = torch.rand(8, 1, 16, 16, 16)
+    labels = torch.randint(0, 3, (8,))
+    dataset = TensorDataset(images, labels)
+
+    checkpoint = tmp_path / "resume_checkpoint.pth"
+    model = Crop3DCNN(num_classes=3)
+
+    train_model(
+        model, dataset,
+        epochs=1,
+        batch_size=2,
+        checkpoint_path=checkpoint
+    )
+
+    resumed_model = train_model(
+        model, dataset,
+        epochs=2,
+        batch_size=2,
+        checkpoint_path=checkpoint,
+        resume=True
+    )
+
+    saved = torch.load(checkpoint, map_location="cpu", weights_only=False)
+
+    assert isinstance(resumed_model, Crop3DCNN)
+    assert saved["epoch"] == 1
