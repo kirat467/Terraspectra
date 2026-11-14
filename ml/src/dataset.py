@@ -20,7 +20,7 @@ class HyperspectralDataset(Dataset):
         if len(images) == 0:
             raise ValueError("Dataset is empty")
 
-        if normalization not in (None, "zscore", "minmax"):
+        if normalization not in (None, "zscore", "minmax", "snv"):
             raise ValueError("Invalid normalization method")
 
     def __len__(self):
