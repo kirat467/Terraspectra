@@ -262,3 +262,20 @@ with open("docs/day7_9_summary.md", "w", encoding="utf-8") as f:
         f.write(f"- {k}: {v}\n")
     f.write(f"- Reprojected to {dst_crs} at {tres} deg, bilinear (labels: nearest)\n")
     f.write("- Georeference was a PLACEHOLDER for test data; replace with real scene CRS/transform\n")
+# ============================================================
+# Tracker + Git
+# ============================================================
+print("\n===== Tracker + Git =====")
+if os.path.exists("scripts/mark_done.py"):
+    for d in ("7", "8"):
+        subprocess.run([sys.executable, "scripts/mark_done.py", d, "3"], stdout=subprocess.DEVNULL)
+    subprocess.run([sys.executable, "scripts/mark_done.py", "9", "3"])
+try:
+    subprocess.run(["git", "add", "."], check=True)
+    subprocess.run(["git", "commit", "-m", "Day 7-9: bad bands, masking, gap fill, quality, reprojection"], check=True)
+    if subprocess.run(["git", "remote"], capture_output=True, text=True).stdout.strip():
+        subprocess.run(["git", "push"], check=False)
+except Exception as e:
+    print("Git issue:", e)
+
+print("\nDAY 7-9 DONE. Check reports/figures/d7_*, d8_*, d9_* and docs/day7_9_summary.md")
