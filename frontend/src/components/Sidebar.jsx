@@ -96,10 +96,12 @@ export default function Sidebar({ meta, fields, risk, prevRisk, history, index, 
         <TrendChart history={history.history} index={index} onIndex={onIndex} />
       </section>
 
-      <section className="panel">
-        <h3>Spectral signals</h3>
-        <SignalChart signals={history.signals} dates={history.dates} index={index} />
-      </section>
+      {history.signals && (
+        <section className="panel">
+          <h3>Spectral signals</h3>
+          <SignalChart signals={history.signals} dates={history.dates} index={index} />
+        </section>
+      )}
 
       <section className="panel">
         <h3>Scan dates</h3>
