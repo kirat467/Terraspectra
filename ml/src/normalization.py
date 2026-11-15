@@ -10,7 +10,7 @@ def normalize_spectral_cube(cube, method="zscore"):
     if not np.isfinite(cube).all():
         raise ValueError("Cube contains invalid values")
 
-    if method not in ("zscore", "minmax"):
+    if method not in ("zscore", "minmax", "snv"):
         raise ValueError("Invalid normalization method")
 
     if method == "zscore":
@@ -19,9 +19,15 @@ def normalize_spectral_cube(cube, method="zscore"):
         std[std == 0] = 1
         return (cube - mean) / std
 
-    minimum = cube.min(axis=(0, 1), keepdims=True)
-    maximum = cube.max(axis=(0, 1), keepdims=True)
-    difference = maximum - minimum
-    difference[difference == 0] = 1
+    if method == "minmax":
+        minimum = cube.min(axis=(0, 1), keepdims=True)
+        maximum = cube.max(axis=(0, 1), keepdims=True)
+        difference = maximum - minimum
+        difference[difference == 0] = 1
+        return (cube - minimum) / difference
 
-    return (cube - minimum) / difference
+    mean = cube.mean(axis=-1, keepdims=True)
+    std = cube.std(axis=-1, keepdims=True)
+    std[std == 0] = 1
+
+    return (cube - mean) / std

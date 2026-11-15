@@ -6,9 +6,9 @@ def test_missing_classes(monkeypatch):
 
     monkeypatch.setattr(
         training,
-        "prepare_multiclass_data",
+        "prepare_patch_dataset",
         lambda folder: (
-            [],
+            {},
             {
                 "Healthy": 1,
                 "Alternaria alternata": 1
@@ -16,7 +16,7 @@ def test_missing_classes(monkeypatch):
         )
     )
 
-    with pytest.raises(ValueError, match="Missing disease classes"):
+    with pytest.raises(ValueError, match="Missing classes"):
         training.train_multiclass_3dcnn()
 
 
@@ -33,10 +33,16 @@ def test_all_classes_present(monkeypatch):
         "Fusarium oxysporum": 1
     }
 
+    datasets = {
+        "train": ["fake train data"],
+        "val": ["fake validation data"],
+        "test": ["fake test data"]
+    }
+
     monkeypatch.setattr(
         training,
-        "prepare_multiclass_data",
-        lambda folder: (["fake dataset"], counts)
+        "prepare_patch_dataset",
+        lambda folder: (datasets, counts)
     )
 
     monkeypatch.setattr(

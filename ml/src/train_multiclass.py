@@ -1,7 +1,6 @@
-from ml.src.prepare_multiclass_data import prepare_multiclass_data
+from ml.src.prepare_patch_dataset import prepare_patch_dataset
 from ml.src.model_3dcnn import Crop3DCNN
 from ml.src.train_3dcnn import train_model, save_model
-
 
 NUM_CLASSES = 5
 
@@ -17,11 +16,11 @@ REQUIRED_CLASSES = [
 def train_multiclass_3dcnn(
     folder="ml/dataset/raw",
     epochs=10,
-    batch_size=4,
+    batch_size=2,
     lr=0.001
 ):
 
-    dataset, class_counts = prepare_multiclass_data(folder)
+    datasets, class_counts = prepare_patch_dataset(folder)
 
     missing = [
         name for name in REQUIRED_CLASSES
@@ -29,18 +28,17 @@ def train_multiclass_3dcnn(
     ]
 
     if missing:
-        raise ValueError(
-            f"Missing disease classes: {missing}"
-        )
+        raise ValueError(f"Missing classes: {missing}")
 
     model = Crop3DCNN(num_classes=NUM_CLASSES)
 
     model = train_model(
         model,
-        dataset,
+        datasets["train"],
         epochs=epochs,
         batch_size=batch_size,
-        lr=lr
+        lr=lr,
+        validation_dataset=datasets["val"]
     )
 
     save_model(model, "ml/models/terraspectra_3dcnn.pth")
