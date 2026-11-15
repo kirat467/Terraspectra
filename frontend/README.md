@@ -58,6 +58,16 @@ python frontend/scripts/make_mock_scene.py
 python frontend/scripts/make_mock_risk.py
 ```
 
+## Screenshots
+
+All pictures use simulated data. More are in `docs/screenshots/`.
+
+![Farm overview with the risk heatmap](../docs/screenshots/01_farm_overview.png)
+![Zooming into the biggest risk zone](../docs/screenshots/02_zone_zoom.png)
+![Timeline, trend chart and spectral signals](../docs/screenshots/03_timeline_and_charts.png)
+![Phone layout](../docs/screenshots/04_phone.png)
+![Risk maps produced by the pipeline from simulated scans](../docs/screenshots/05_pipeline_output.png)
+
 ## Risk map format
 
 The dashboard reads one file per scan date. The real model's API should return the same shape, so the mock files can be swapped out later.
