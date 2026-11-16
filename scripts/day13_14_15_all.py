@@ -36,3 +36,20 @@ def git(msg):
             subprocess.run(["git", "push"], check=False)
     except Exception as e:
         print("Git issue:", e)
+        # ============================================================
+# Load inputs from Day 12
+# ============================================================
+need = ["data/interim/smoothed_reflectance.npy", "data/interim/wavelengths_clean.npy"]
+for p in need:
+    if not os.path.exists(p):
+        raise SystemExit(f"{p} not found. Run day10_11_12_all.py first.")
+refl = np.load(need[0]).astype("float32")          # (B,H,W) smoothed reflectance 0-1
+wl = np.load(need[1])
+B, H, W = refl.shape
+labels_raw = np.load("data/interim/preprocessed_labels.npy") if os.path.exists("data/interim/preprocessed_labels.npy") else None
+is_test = labels_raw is not None and os.path.exists("data/interim/indian_pines_gt.npy")
+print(f"Reflectance cube: {refl.shape} | wavelengths {wl.min():.0f}-{wl.max():.0f} nm")
+if is_test:
+    print("NOTE: Indian Pines wavelengths are approximate, so index VALUES are for pipeline testing only.")
+
+nan_px = np.isnan(refl).any(axis=0)
