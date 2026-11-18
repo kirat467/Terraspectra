@@ -132,3 +132,8 @@ input[type=range] { flex: 1; min-width: 80px; accent-color: var(--accent); }
 .seg button { flex: 1; padding: 5px 4px; font-size: 11.5px; border: 1px solid var(--line); background: var(--panel2); border-radius: 7px; cursor: pointer; color: var(--muted); }
 .seg button.on { background: rgba(155, 210, 90, .14); border-color: rgba(155, 210, 90, .55); color: var(--ink); font-weight: 600; }
 @media (max-width: 900px) { .timeline { border-left: 0; padding: 8px 12px 10px; gap: 6px; } .tl-now { display: none; } .tl-tick { font-size: 10px; } .tl-track { margin: 0 4px; } }
+
+/* ---- priority zones ---- */
+.slider.flush { padding-left: 0; padding-bottom: 4px; }
+.slider.flush b { color: var(--ink); }
+.risk-panel .toggle { padding: 4px 0 8px; font-size: 13px; }
