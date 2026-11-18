@@ -106,3 +106,19 @@ with open("docs/data_dictionary.md", "w", encoding="utf-8") as f:
             "6. Reprojection (bilinear; labels nearest) 7. Savitzky-Golay smoothing 8. Vegetation indices 9. Label alignment "
             "10. Patch extraction (non-overlapping) 11. Spatial block split 12. Train-only z-score normalization\n")
 print("Saved docs/data_dictionary.md")
+# ============================================================
+# DAY 19.2: Preprocessing report
+# ============================================================
+fig_list = [("d9_alignment_check", "Label/image alignment"), ("d12_smoothing", "Savitzky-Golay smoothing"),
+            ("d13_index_maps", "Vegetation index maps"), ("d17_spatial_split", "Spatial split"),
+            ("d18_class_distribution_splits", "Class distribution per split")]
+limits = []
+if is_test:
+    limits.append("Pipeline validated on Indian Pines (benchmark crop classification, NOT disease labels); wavelengths and georeference are approximate/placeholder. Re-run the scripts on the real scene and disease labels.")
+limits += ["Cloud/shadow mask is heuristic (brightness thresholds); use the official sensor mask product for production.",
+           "Weather risk thresholds (15-30 C, humidity > 80%) are a generic fungal-risk proxy; need disease-specific thresholds from the domain expert."]
+if cw.get("rare_classes_lt5_train"):
+    limits.append(f"Classes with fewer than 5 train patches: {cw['rare_classes_lt5_train']} (merge, drop or augment).")
+
+rep = f"""# Preprocessing Report - TerraSpectra: Hyperspectral Crop Disease Forecasting
+Author: {AUTHOR} | Ref: {REF_NO} | Date: {date.today()} | Role: Data Collection & Preparation
