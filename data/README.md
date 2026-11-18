@@ -6,11 +6,16 @@ The real dataset is still pending, so these scripts build a stand-in that the re
 |---|---|
 | `spectral_simulator.py` | Reflectance of a crop canopy from 400 to 2400 nm (200 bands) for any disease severity from 0 to 1, plus soil and water. |
 | `make_scene.py` | Builds one 135 x 135 x 200 cube per scan date on the same farm as the dashboard. Writes GeoTIFF files and one HDF5 file. |
-| `tests/` | 11 tests (`python -m pytest data/tests`). |
+| `load_scene.py` | Reads a scan back from the HDF5 or GeoTIFF file as a NumPy cube (height, width, bands) with wavelengths, bounds and labels. |
+| `check_alignment.py` | Checks that the cube's GPS transform matches the dashboard's farm grid (edges, 15 m pixels, field corners on whole pixels). |
+| `make_patches.py` | PCA to 20 bands (fitted on training blocks only) and 9 x 9 x 20 patches with a block-based train/val/test split that cannot leak. |
+| `tests/` | `python -m pytest data/tests` |
 
 ```bash
 pip install -r data/requirements.txt
 python data/make_scene.py          # writes data/generated/ (about 70 MB, ignored by git)
+python data/check_alignment.py data/generated/scene_2026-11-10.tif
+python data/make_patches.py        # writes data/generated/patches.npz and docs/figures/pca_variance.png
 ```
 
 ## What the simulation assumes
