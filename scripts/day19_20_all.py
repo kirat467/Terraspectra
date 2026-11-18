@@ -122,3 +122,48 @@ if cw.get("rare_classes_lt5_train"):
 
 rep = f"""# Preprocessing Report - TerraSpectra: Hyperspectral Crop Disease Forecasting
 Author: {AUTHOR} | Ref: {REF_NO} | Date: {date.today()} | Role: Data Collection & Preparation
+## 1. Objective
+Build a clean, leakage-free, reproducible hyperspectral dataset (patches + labels + weather features) for the modeling team.
+
+## 1. Objective
+Build a clean, leakage-free, reproducible hyperspectral dataset (patches + labels + weather features) for the modeling team.
+
+## 2. Data used
+- Dataset: {dataset_name}
+- Scene shape (bands, H, W): {scene.get('shape_BHW')}
+- Wavelength range: {scene.get('wavelength_min_nm')} - {scene.get('wavelength_max_nm')} nm
+- Weather: {'NASA POWER daily data saved (data/metadata/weather_daily.csv)' if weather_ok else 'not downloaded'}
+
+## 3. Data quality and cleaning
+| Item | Value |
+|---|---|
+""" + "".join(f"| {k} | {v} |\n" for k, v in quality.items()) + f"""
+Steps: reflectance scaling, water-absorption band removal, noisy-band detection (local-neighbour deviation, z>3), cloud/shadow masking, spectral gap filling, clipping to [0,1].
+
+## 4. Reprojection / resampling
+Bilinear resampling for imagery, nearest-neighbour for labels (class values are never interpolated). Alignment verified by overlay (reports/figures/d9_alignment_check.png).
+
+## 5. Smoothing and normalization
+- Savitzky-Golay: window {smooth.get('savgol_window')}, polyorder {smooth.get('savgol_polyorder')} (selected automatically: least distortion with >=30% roughness reduction)
+- Normalization: per-band z-score computed on TRAIN patches only (prevents test-set leakage)
+
+""" + ("### Smoothing comparison\n" + md_table(smooth_cmp.round(5)) + "\n" if smooth_cmp is not None else "") + f"""
+## 6. Vegetation indices
+Computed: {idx_names}. """ + ("\n\n" + md_table(fisher.round(4)) if fisher is not None else "") + f"""
+
+## 7. Dataset preparation
+- Patch size {patch}x{patch}, non-overlapping (no pixel shared between patches)
+- Spatial block split (block = {dsm.get('block_size_patches')}x{dsm.get('block_size_patches')} patches), seed {dsm.get('split_seed')}; random pixel split deliberately avoided
+- Patches: train {n_p.get('train')}, val {n_p.get('val')}, test {n_p.get('test')}
+- Classes: {len(classes)} | train imbalance ratio {cw.get('imbalance_ratio_train', 'NA')}
+- Imbalance handling: balanced class weights (class_weights.json) and oversampling index (train_oversampled_idx.npy)
+
+""" + ("### Class distribution (patches)\n" + md_table(dist) + "\n" if dist is not None else "") + """
+## 8. Final dataset
+data/processed/terraspectra_dataset.h5 (groups train/val/test). See docs/data_dictionary.md and docs/dataset_card.md.
+
+## 9. Figures
+""" + "".join(f"- {t}: reports/figures/{n}.png\n" for n, t in fig_list if os.path.exists(f"reports/figures/{n}.png")) + """
+## 10. Limitations and risks
+""" + "".join(f"- {x}\n" for x in limits) + """
+## 11. Reproduction
