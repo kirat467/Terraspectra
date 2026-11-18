@@ -3,7 +3,7 @@ import TrendChart from "./TrendChart.jsx";
 import SignalChart from "./SignalChart.jsx";
 import { riskLabel, riskSolid, riskText } from "../lib/risk.js";
 
-export default function Sidebar({ meta, fields, risk, prevRisk, history, index, onIndex, selected, hovered, onSelect, onZone, layers, setLayers }) {
+export default function Sidebar({ meta, fields, risk, prevRisk, history, index, onIndex, selected, hovered, onSelect, onZone, zoneCfg, setZoneCfg, zoneList, layers, setLayers }) {
   const stats = Object.fromEntries((risk?.fields ?? []).map((f) => [f.name, f]));
   const sorted = [...fields].sort((a, b) => (stats[b.properties.name]?.peak_risk ?? 0) - (stats[a.properties.name]?.peak_risk ?? 0));
   const active = fields.find((f) => f.properties.name === selected);
@@ -26,19 +26,31 @@ export default function Sidebar({ meta, fields, risk, prevRisk, history, index, 
             <div><dt>Peak risk</dt><dd className="num" style={{ color: riskText(s.peak_risk) }}>{s.peak_risk.toFixed(2)}</dd></div>
             <div><dt>Moderate, acres</dt><dd className="num">{fmtAcres(s.acres_moderate)}</dd></div>
           </dl>
-          <h4>Risk zones</h4>
-          {risk.zones.length === 0 && <p className="muted small">No zone above the high-risk level yet.</p>}
+          <h4>Priority zones</h4>
+          <label className="slider flush">
+            <span>Risk at least <b className="num">{zoneCfg.threshold.toFixed(2)}</b></span>
+            <input type="range" min="30" max="90" step="5" value={Math.round(zoneCfg.threshold * 100)} aria-label="Risk threshold"
+              onChange={(e) => setZoneCfg({ ...zoneCfg, threshold: e.target.value / 100 })} />
+          </label>
+          <label className="slider flush">
+            <span>Area at least <b className="num">{zoneCfg.minAcres}</b> ac</span>
+            <input type="range" min="0" max="20" step="1" value={zoneCfg.minAcres} aria-label="Smallest zone area in acres"
+              onChange={(e) => setZoneCfg({ ...zoneCfg, minAcres: Number(e.target.value) })} />
+          </label>
+          <label className="toggle"><input type="checkbox" checked={zoneCfg.outline} onChange={(e) => setZoneCfg({ ...zoneCfg, outline: e.target.checked })} /><span>Outline zones on the map</span></label>
+          {zoneList.length === 0 && <p className="muted small">No area of {zoneCfg.minAcres} acres or more reaches risk {zoneCfg.threshold.toFixed(2)}. Lower either slider to see smaller zones.</p>}
           <ul className="zones">
-            {risk.zones.map((z) => (
+            {zoneList.map((z) => (
               <li key={z.id}>
                 <button type="button" className="zone-row" onClick={() => onZone(z)}>
-                  <span className="zone-id" style={{ background: riskSolid(z.peak_risk) }}>{z.id}</span>
-                  <span className="fname">{z.field}<small>{z.crop}, peak {z.peak_risk.toFixed(2)}</small></span>
+                  <span className="zone-id" style={{ background: riskSolid(z.peak) }}>{z.id}</span>
+                  <span className="fname">{z.field ?? "Between fields"}<small>{z.crop ? `${z.crop}, ` : ""}peak {z.peak.toFixed(2)}</small></span>
                   <span className="num">{fmtAcres(z.acres)} ac</span>
                 </button>
               </li>
             ))}
           </ul>
+          {zoneList.length > 0 && <p className="muted small">{zoneList.length} zone{zoneList.length > 1 ? "s" : ""}, {fmtAcres(zoneList.reduce((s, z) => s + z.acres, 0))} acres in total.</p>}
         </section>
       )}
 

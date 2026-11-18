@@ -8,6 +8,7 @@ import RiskLegend from "./components/RiskLegend.jsx";
 import Timeline from "./components/Timeline.jsx";
 import { fitFarm, fitField, fmtAcres, fmtDate } from "./lib/geo.js";
 import { cellAt, riskImage, riskLabel } from "./lib/risk.js";
+import { acresPerCell, cellToLonLat, fieldAt, findZones, outlineImage } from "./lib/zones.js";
 
 const DATA = `${import.meta.env.BASE_URL}data/`;
 const VIEWS = [new MapView({ id: "map", repeat: false })];
@@ -26,6 +27,7 @@ export default function App() {
   const [selected, setSelected] = useState(null);
   const [hover, setHover] = useState(null);          // { name, x, y }
   const [cursor, setCursor] = useState(null);
+  const [zoneCfg, setZoneCfg] = useState({ threshold: 0.6, minAcres: 5, outline: true });   // priority zones: risk level and smallest area
   const [layers, setLayers] = useState({ risk: true, riskOpacity: 0.85, imagery: true, opacity: 1, boundaries: true, labels: true });
   const mapBox = useRef(null);
   const size = useRef({ width: 900, height: 600 });
@@ -80,9 +82,23 @@ export default function App() {
     fly({ longitude: z.center[0], latitude: z.center[1], zoom: 16.8, pitch: 0, bearing: 0 });
   }, [fly]);
 
+
   const risk = scans ? scans[index] : null;
   const images = useMemo(() => (scans ? scans.map((m) => riskImage(m.risk)) : null), [scans]);   // drawn once, so stepping through dates is instant
   const image = images ? images[index] : null;
+
+  // priority zones from the current risk map and the sliders
+  const zoneInfo = useMemo(() => (risk && meta ? findZones(risk.risk, zoneCfg.threshold, zoneCfg.minAcres, acresPerCell(meta.pixel_size_m)) : null),
+    [risk, meta, zoneCfg.threshold, zoneCfg.minAcres]);
+  const zoneList = useMemo(() => {
+    if (!zoneInfo) return [];
+    return zoneInfo.zones.map((z) => {
+      const center = cellToLonLat(z.row, z.col, risk.bounds, risk.rows, risk.cols);
+      const f = fieldAt(center[0], center[1], features);
+      return { ...z, center, field: f?.properties.name ?? null, crop: f?.properties.crop ?? "" };
+    });
+  }, [zoneInfo, risk, features]);
+  const zoneImage = useMemo(() => (zoneInfo && zoneInfo.zones.length ? outlineImage(zoneInfo.mask, zoneInfo.rows, zoneInfo.cols) : null), [zoneInfo]);
   const cell = cursor ? cellAt(risk, cursor[0], cursor[1]) : null;
   const detailed = viewState ? viewState.zoom >= 15.3 : false;
 
@@ -95,6 +111,12 @@ export default function App() {
       list.push(new BitmapLayer({
         id: "risk", image, bounds: risk.bounds, opacity: layers.riskOpacity, visible: layers.risk,
         textureParameters: { minFilter: "nearest", magFilter: "nearest" },      // keep the cells square
+      }));
+    }
+    if (risk && zoneImage) {
+      list.push(new BitmapLayer({
+        id: "zones", image: zoneImage, bounds: risk.bounds, visible: zoneCfg.outline,
+        textureParameters: { minFilter: "nearest", magFilter: "nearest" },
       }));
     }
     list.push(
@@ -116,7 +138,7 @@ export default function App() {
       }),
     );
     return list;
-  }, [meta, fieldData, features, risk, image, layers, selected, hover?.name, detailed]);
+  }, [meta, fieldData, features, risk, image, zoneImage, zoneCfg.outline, layers, selected, hover?.name, detailed]);
 
   if (error) {
     return (
@@ -146,7 +168,7 @@ export default function App() {
         </div>
       </header>
 
-      <Sidebar meta={meta} fields={features} risk={risk} prevRisk={index > 0 ? scans[index - 1] : null} history={history} index={index} onIndex={setIndex} selected={selected} hovered={hover?.name} onSelect={select} onZone={flyToZone} layers={layers} setLayers={setLayers} />
+      <Sidebar meta={meta} fields={features} risk={risk} prevRisk={index > 0 ? scans[index - 1] : null} history={history} index={index} onIndex={setIndex} selected={selected} hovered={hover?.name} onSelect={select} onZone={flyToZone} zoneCfg={zoneCfg} setZoneCfg={setZoneCfg} zoneList={zoneList} layers={layers} setLayers={setLayers} />
 
       <main className="map" ref={mapBox}>
         {viewState && (

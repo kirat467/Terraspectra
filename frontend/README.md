@@ -48,6 +48,8 @@ frontend/
   src/components/SignalChart.jsx simulated spectral signals (NDVI, red edge, leaf water): outbreak core vs healthy
   src/lib/geo.js                 camera fitting, scale bar maths, formatting
   src/lib/risk.js                risk colours, labels, heatmap picture, cell lookup
+  src/lib/zones.js               priority zones: connected high-risk areas, outlines, field lookup
+  scripts/test_zones.mjs         tests for zones.js (node scripts/test_zones.mjs)
   src/styles.css
 ```
 
@@ -58,15 +60,13 @@ python frontend/scripts/make_mock_scene.py
 python frontend/scripts/make_mock_risk.py
 ```
 
-## Screenshots
+## Priority zones
 
-All pictures use simulated data. More are in `docs/screenshots/`.
+The risk panel has two sliders: the lowest risk that counts (0.30 to 0.90) and the smallest area (0 to 20 acres, 5 by default). Every connected patch of the map that meets both is a priority zone. Zones are outlined in white on the map, listed with their field and size, and clicking one flies the map to it. They are computed in the browser from the risk grid, so they work with any risk file that follows the format below.
 
-![Farm overview with the risk heatmap](../docs/screenshots/01_farm_overview.png)
-![Zooming into the biggest risk zone](../docs/screenshots/02_zone_zoom.png)
-![Timeline, trend chart and spectral signals](../docs/screenshots/03_timeline_and_charts.png)
-![Phone layout](../docs/screenshots/04_phone.png)
-![Risk maps produced by the pipeline from simulated scans](../docs/screenshots/05_pipeline_output.png)
+![Priority zones at risk 0.40 and 1 acre](../docs/screenshots/06_priority_zones.png)
+
+Run the zone tests with `node scripts/test_zones.mjs` from the `frontend` folder (no install needed).
 
 ## Risk map format
 
