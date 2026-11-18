@@ -51,3 +51,20 @@ def sha(path):
 H5 = "data/processed/terraspectra_dataset.h5"
 if not os.path.exists(H5):
     raise SystemExit("Final dataset not found. Run day16_17_18_all.py first.")
+# ---------- gather everything produced so far ----------
+dsm = jl("data/metadata/dataset_metadata.json")
+quality = jl("data/metadata/quality_report.json")
+scene = jl("data/metadata/scene_metadata.json")
+smooth = jl("data/metadata/smoothing_choice.json")
+cw = jl("data/processed/class_weights.json")
+dataset_name = scene.get("dataset", "unknown")
+is_test = "Indian" in dataset_name
+dist = pd.read_csv("data/metadata/class_distribution_patches.csv") if os.path.exists("data/metadata/class_distribution_patches.csv") else None
+fisher = pd.read_csv("data/metadata/indices_fisher_scores.csv") if os.path.exists("data/metadata/indices_fisher_scores.csv") else None
+smooth_cmp = pd.read_csv("data/metadata/smoothing_comparison.csv") if os.path.exists("data/metadata/smoothing_comparison.csv") else None
+weather_ok = os.path.exists("data/metadata/weather_daily.csv")
+n_p = dsm.get("n_patches", {})
+patch = dsm.get("patch_size")
+bands = dsm.get("bands")
+idx_names = dsm.get("indices", [])
+classes = dsm.get("classes", {})
