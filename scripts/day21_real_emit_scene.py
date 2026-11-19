@@ -27,3 +27,23 @@ import matplotlib.pyplot as plt
 
 for d in ("data/raw/emit_real", "data/interim", "data/metadata", "data/labels", "reports/figures"):
     os.makedirs(d, exist_ok=True)
+# ---------- 1. search + pick scene ----------
+earthaccess.login()
+res = earthaccess.search_data(short_name="EMITL2ARFL", bounding_box=BBOX, temporal=DATE_RANGE, count=30)
+if not res:
+    raise SystemExit("No EMIT scenes found. Widen BBOX / DATE_RANGE (EMIT coverage is sparse).")
+
+
+def cloud_of(r):
+    try:
+        return float(r["umm"].get("CloudCover"))
+    except Exception:
+        return 999.0
+
+
+print(f"{len(res)} scenes found:")
+for i, r in enumerate(res):
+    print(f"  [{i}] {r['umm']['GranuleUR']} | cloud: {cloud_of(r) if cloud_of(r) < 999 else 'NA'}")
+k = int(np.argmin([cloud_of(r) for r in res])) if AUTO_PICK_LOWEST_CLOUD else SCENE_INDEX
+granule = res[k]["umm"]["GranuleUR"]
+print("Selected:", granule)
