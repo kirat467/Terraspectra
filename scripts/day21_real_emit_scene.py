@@ -59,3 +59,15 @@ if not rfl_files:
 rfl_file = rfl_files[0]
 mask_file = mask_files[0] if mask_files else None
 print("Reflectance:", os.path.basename(rfl_file), "| Mask:", os.path.basename(mask_file) if mask_file else "NOT FOUND")
+# ---------- 3. open scene + GLT ----------
+ds = xr.open_dataset(rfl_file)
+loc = xr.open_dataset(rfl_file, group="location")
+bp = xr.open_dataset(rfl_file, group="sensor_band_parameters")
+wl = bp["wavelengths"].values.astype("float32")
+good = bp["good_wavelengths"].values.astype(bool) if "good_wavelengths" in bp else np.ones(len(wl), bool)
+gtf = np.array(ds.attrs["geotransform"], dtype=float)      # GDAL order: ulx, xres, xskew, uly, yskew, yres
+gx = np.nan_to_num(loc["glt_x"].values, nan=0).astype("int64")
+gy = np.nan_to_num(loc["glt_y"].values, nan=0).astype("int64")
+valid = (gx > 0) & (gy > 0)                                 # GLT indices are 1-based, 0 = no data
+Ho, Wo = gx.shape
+print(f"Raw bands: {len(wl)} | ortho grid: {Ho} x {Wo} | valid ortho pixels: {valid.mean() * 100:.1f}%")
