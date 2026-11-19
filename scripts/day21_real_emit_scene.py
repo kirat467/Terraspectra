@@ -174,3 +174,40 @@ if SAVE_TIF:
         for i in range(cube.shape[0]):
             dst.set_band_description(i + 1, f"{wl[i]:.1f}nm")
     print("Saved data/interim/real_scene_ortho.tif")
+    # ---------- 9. preview + label area ----------
+def stretch(a):
+    lo, hi = np.nanpercentile(a, (2, 98))
+    return np.clip(np.nan_to_num((a - lo) / (hi - lo + 1e-9)), 0, 1)
+
+
+def b(nm):
+    return int(np.argmin(np.abs(wl - nm)))
+
+
+rgb = np.dstack([stretch(cube[b(650)]), stretch(cube[b(550)]), stretch(cube[b(470)])])
+fc = np.dstack([stretch(cube[b(850)]), stretch(cube[b(650)]), stretch(cube[b(550)])])
+fig, ax = plt.subplots(1, 2, figsize=(12, 6))
+ax[0].imshow(rgb); ax[0].set_title("Real EMIT scene: RGB (black = masked/no data)")
+ax[1].imshow(fc); ax[1].set_title("False colour (NIR-R-G)")
+for a in ax:
+    a.axis("off")
+plt.tight_layout(); plt.savefig("reports/figures/d21_real_scene_preview.png", dpi=150); plt.close()
+
+open("data/labels/README_label_area.txt", "w").write(
+    f"Scene: {granule} (date {scene_date})\n"
+    f"Field label points MUST fall inside this box (EPSG:4326):\n"
+    f"  lon {lon_min:.5f} to {lon_max:.5f}\n  lat {lat_min:.5f} to {lat_max:.5f}\n"
+    "Save labels as data/labels/field_points.csv with columns: lat,lon,label\n")
+open("data/labels/field_points_TEMPLATE.csv", "w").write("lat,lon,label\n")
+
+try:
+    subprocess.run(["git", "add", "-A"], check=True)
+    subprocess.run(["git", "commit", "-m", "Day 21: real EMIT scene, orthorectified crop with official mask"], check=False)
+    if subprocess.run(["git", "remote"], capture_output=True, text=True).stdout.strip():
+        subprocess.run(["git", "push"], check=False)
+except Exception as e:
+    print("Git issue:", e)
+
+print("\nDONE. Scene date:", scene_date, "| label area: data/labels/README_label_area.txt")
+print(f"Set WEATHER_START/WEATHER_END in day13_14_15_all.py around {scene_date} (e.g. 30 days before to the scene date).")
+print("Now apply the 3 small edits to scripts/day7_8_9_all.py (below), then re-run day7_8_9 onwards.")
