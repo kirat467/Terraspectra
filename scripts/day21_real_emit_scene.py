@@ -91,3 +91,28 @@ gxw, gyw, vw = gx[r0:r1, c0:c1], gy[r0:r1, c0:c1], valid[r0:r1, c0:c1]
 if vw.sum() < 1000:
     raise SystemExit("Too few valid pixels in crop. Try another scene (SCENE_INDEX).")
 Hw, Ww = r1 - r0, c1 - c0
+# ---------- 5. load only the raw rows needed ----------
+ys, xs = gyw[vw] - 1, gxw[vw] - 1
+rmin, rmax = int(ys.min()), int(ys.max())
+print(f"Loading raw rows {rmin}-{rmax} ({rmax - rmin + 1} rows) ...")
+slab = ds["reflectance"][rmin:rmax + 1, :, :].values.astype("float32")
+
+bad_raw = np.zeros(slab.shape[:2], bool)
+if mask_file:
+    mds = xr.open_dataset(mask_file)
+    mk = mds["mask"][rmin:rmax + 1, :, :].values
+    try:
+        names = [str(n).lower() for n in xr.open_dataset(mask_file, group="sensor_band_parameters")["mask_bands"].values]
+    except Exception:
+        names = []
+    use = [i for i, n in enumerate(names)
+           if ("cloud" in n or "cirrus" in n or "spacecraft" in n or (MASK_WATER and "water" in n))]
+    if not use:
+        use = [0, 1, 3, 4]
+        print("Mask band names not readable -> using indices 0,1,3,4 (cloud, cirrus, spacecraft, dilated cloud)")
+    else:
+        print("Mask flags used:", [names[i] for i in use])
+    for i in use:
+        bad_raw |= np.nan_to_num(mk[..., i]) > 0
+else:
+    print("WARNING: no mask file -> clouds NOT masked")
