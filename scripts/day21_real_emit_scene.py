@@ -116,3 +116,23 @@ if mask_file:
         bad_raw |= np.nan_to_num(mk[..., i]) > 0
 else:
     print("WARNING: no mask file -> clouds NOT masked")
+# ---------- 6. orthorectify (raw -> map grid via GLT) ----------
+yy, xx = ys - rmin, xs
+vals = slab[yy, xx, :]
+badp = bad_raw[yy, xx]
+vals[badp] = np.nan
+vals[vals <= -9990] = np.nan
+out = np.full((Hw, Ww, slab.shape[2]), np.nan, dtype="float32")
+out[vw] = vals
+cube = np.ascontiguousarray(out.transpose(2, 0, 1))      # (B, H, W)
+del slab, out, vals
+
+mid = cube.shape[0] // 2
+print(f"Crop shape (B,H,W): {cube.shape} | masked (cloud/cirrus/etc.): {badp.mean() * 100:.1f}% of valid | "
+      f"usable pixels: {np.isfinite(cube[mid]).mean() * 100:.1f}%")
+
+x0 = gtf[0] + c0 * gtf[1] + r0 * gtf[2]
+y0 = gtf[3] + c0 * gtf[4] + r0 * gtf[5]
+tf = Affine(gtf[1], gtf[2], x0, gtf[4], gtf[5], y0)
+lon_min, lon_max = x0, x0 + Ww * gtf[1]
+lat_max, lat_min = y0, y0 + Hw * gtf[5]
