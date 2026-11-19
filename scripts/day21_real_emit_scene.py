@@ -47,3 +47,15 @@ for i, r in enumerate(res):
 k = int(np.argmin([cloud_of(r) for r in res])) if AUTO_PICK_LOWEST_CLOUD else SCENE_INDEX
 granule = res[k]["umm"]["GranuleUR"]
 print("Selected:", granule)
+# ---------- 2. download only reflectance + mask ----------
+links = [l for l in res[k].data_links() if l.endswith(".nc") and "UNCERT" not in l.upper()]
+print("Downloading:", [os.path.basename(l) for l in links], "(can be a few GB)")
+earthaccess.download(links, "data/raw/emit_real")
+nc = glob.glob("data/raw/emit_real/*.nc")
+rfl_files = [f for f in nc if "_RFL_" in os.path.basename(f) and "UNCERT" not in f.upper()]
+mask_files = [f for f in nc if "_MASK_" in os.path.basename(f)]
+if not rfl_files:
+    raise SystemExit("Reflectance file not found in data/raw/emit_real. Download may have failed.")
+rfl_file = rfl_files[0]
+mask_file = mask_files[0] if mask_files else None
+print("Reflectance:", os.path.basename(rfl_file), "| Mask:", os.path.basename(mask_file) if mask_file else "NOT FOUND")
