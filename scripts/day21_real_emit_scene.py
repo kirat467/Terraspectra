@@ -150,3 +150,27 @@ if ARCHIVE_OLD and not os.path.exists("data/interim/real_scene_cube.npy"):
             moved += 1
     print(f"Archived {moved} old files to {arch} (weather_daily.csv kept)")
 
+# ---------- 8. save ----------
+m = re.search(r"_(\d{8})T", granule)
+scene_date = m.group(1) if m else "unknown"
+np.save("data/interim/real_scene_cube.npy", cube)
+np.save("data/interim/real_scene_wl.npy", wl)
+np.save("data/interim/real_scene_good.npy", good)
+meta = {"granule": granule, "scene_date": scene_date, "crs": "EPSG:4326",
+        "transform": [tf.a, tf.b, tf.c, tf.d, tf.e, tf.f], "shape_BHW": list(cube.shape),
+        "bbox_lonlat": [lon_min, lat_min, lon_max, lat_max], "crop_window_rc": [r0, r1, c0, c1]}
+json.dump(meta, open("data/interim/real_scene_meta.json", "w"), indent=2)
+json.dump({"dataset": f"EMIT_real_{granule}", "sensor": "EMIT", "shape_BHW": list(cube.shape),
+           "wavelength_min_nm": float(wl.min()), "wavelength_max_nm": float(wl.max()),
+           "nan_percent": round(float(np.isnan(cube).mean() * 100), 3)},
+          open("data/metadata/scene_metadata.json", "w"), indent=2)
+
+if SAVE_TIF:
+    import rasterio
+    with rasterio.open("data/interim/real_scene_ortho.tif", "w", driver="GTiff", height=Hw, width=Ww,
+                       count=cube.shape[0], dtype="float32", crs="EPSG:4326", transform=tf,
+                       nodata=np.nan, compress="deflate") as dst:
+        dst.write(cube)
+        for i in range(cube.shape[0]):
+            dst.set_band_description(i + 1, f"{wl[i]:.1f}nm")
+    print("Saved data/interim/real_scene_ortho.tif")
