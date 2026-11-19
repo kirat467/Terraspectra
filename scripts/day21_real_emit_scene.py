@@ -136,3 +136,17 @@ y0 = gtf[3] + c0 * gtf[4] + r0 * gtf[5]
 tf = Affine(gtf[1], gtf[2], x0, gtf[4], gtf[5], y0)
 lon_min, lon_max = x0, x0 + Ww * gtf[1]
 lat_max, lat_min = y0, y0 + Hw * gtf[5]
+# ---------- 7. archive old Indian Pines outputs ----------
+if ARCHIVE_OLD and not os.path.exists("data/interim/real_scene_cube.npy"):
+    arch = "data/archive_previous_run"
+    moved = 0
+    for sub, keep in (("interim", ()), ("processed", ()), ("metadata", ("weather_daily.csv",))):
+        os.makedirs(f"{arch}/{sub}", exist_ok=True)
+        for p in glob.glob(f"data/{sub}/*"):
+            b = os.path.basename(p)
+            if b == ".gitkeep" or b in keep or b.startswith("real_scene"):
+                continue
+            shutil.move(p, f"{arch}/{sub}/{b}")
+            moved += 1
+    print(f"Archived {moved} old files to {arch} (weather_daily.csv kept)")
+
