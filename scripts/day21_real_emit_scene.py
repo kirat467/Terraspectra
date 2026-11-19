@@ -15,3 +15,15 @@ MASK_WATER = False                       # True = also mask water pixels
 ARCHIVE_OLD = True                       # move Indian Pines outputs to data/archive_previous_run
 SAVE_TIF = True                          # also save a GeoTIFF (open in QGIS)
 # ==================================================================
+subprocess.run([sys.executable, "-m", "pip", "install", "-q", "earthaccess", "xarray", "netCDF4", "affine"])
+
+import numpy as np
+import xarray as xr
+import earthaccess
+from affine import Affine
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+
+for d in ("data/raw/emit_real", "data/interim", "data/metadata", "data/labels", "reports/figures"):
+    os.makedirs(d, exist_ok=True)
