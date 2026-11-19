@@ -71,3 +71,23 @@ gy = np.nan_to_num(loc["glt_y"].values, nan=0).astype("int64")
 valid = (gx > 0) & (gy > 0)                                 # GLT indices are 1-based, 0 = no data
 Ho, Wo = gx.shape
 print(f"Raw bands: {len(wl)} | ortho grid: {Ho} x {Wo} | valid ortho pixels: {valid.mean() * 100:.1f}%")
+# ---------- 4. choose crop window ----------
+rr = int(round((CENTER_LAT - gtf[3]) / gtf[5]))
+cc = int(round((CENTER_LON - gtf[0]) / gtf[1]))
+
+
+def window(r, c):
+    r0 = int(np.clip(r - CROP // 2, 0, max(Ho - CROP, 0)))
+    c0 = int(np.clip(c - CROP // 2, 0, max(Wo - CROP, 0)))
+    return r0, min(r0 + CROP, Ho), c0, min(c0 + CROP, Wo)
+
+
+r0, r1, c0, c1 = window(rr, cc)
+if valid[r0:r1, c0:c1].mean() < 0.2:
+    vr, vc = np.where(valid)
+    r0, r1, c0, c1 = window(int(vr.mean()), int(vc.mean()))
+    print("Requested centre is outside the scene -> using scene centroid")
+gxw, gyw, vw = gx[r0:r1, c0:c1], gy[r0:r1, c0:c1], valid[r0:r1, c0:c1]
+if vw.sum() < 1000:
+    raise SystemExit("Too few valid pixels in crop. Try another scene (SCENE_INDEX).")
+Hw, Ww = r1 - r0, c1 - c0
