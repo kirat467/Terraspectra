@@ -25,6 +25,10 @@ export default function Timeline({ dates, index, onIndex }) {
   };
   const go = (i) => { setPlaying(false); onIndex(Math.min(last, Math.max(0, i))); };
 
+  if (last < 1) {                                    // one scan only: nothing to play through
+    return <div className="timeline single" role="group" aria-label="Scan date"><span className="tl-now num">Single scan: <b>{fmtDate(dates[0])}</b></span></div>;
+  }
+
   return (
     <div className="timeline" role="group" aria-label="Scan timeline">
       <button type="button" className="tl-btn" onClick={() => go(index - 1)} disabled={index === 0} aria-label="Previous scan">‹</button>

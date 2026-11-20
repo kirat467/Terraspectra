@@ -137,3 +137,7 @@ input[type=range] { flex: 1; min-width: 80px; accent-color: var(--accent); }
 .slider.flush { padding-left: 0; padding-bottom: 4px; }
 .slider.flush b { color: var(--ink); }
 .risk-panel .toggle { padding: 4px 0 8px; font-size: 13px; }
+
+.timeline.single { justify-content: flex-start; padding: 12px 16px; }
+.timeline.single .tl-now { font-size: 13px; }
+.timeline.single b { color: var(--ink); }

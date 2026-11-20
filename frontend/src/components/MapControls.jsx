@@ -1,7 +1,7 @@
 import { scaleBar } from "../lib/geo.js";
 import { riskLabel } from "../lib/risk.js";
 
-export default function MapControls({ viewState, cursor, cursorRisk, onZoom, onReset }) {
+export default function MapControls({ simulated = true, source, viewState, cursor, cursorRisk, onZoom, onReset }) {
   const bar = scaleBar(viewState.zoom, viewState.latitude);
   return (
     <>
@@ -19,7 +19,7 @@ export default function MapControls({ viewState, cursor, cursorRisk, onZoom, onR
           {cursorRisk != null && <b> · risk {cursorRisk.toFixed(2)} ({riskLabel(cursorRisk)})</b>}
         </div>
       </div>
-      <div className="sim-badge">Simulated data</div>
+      <div className="sim-badge">{simulated ? "Simulated data" : (source ?? "Real scene")}</div>
     </>
   );
 }

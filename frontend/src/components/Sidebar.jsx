@@ -14,14 +14,14 @@ export default function Sidebar({ meta, fields, risk, prevRisk, history, index, 
     <aside className="sidebar" aria-label="Farm overview">
       {risk && (
         <section className="panel risk-panel">
-          <h3>Predicted outbreak risk</h3>
-          <p className="muted small">Chance that fungal blight shows up in the next {risk.horizon_days} days, from the scan of {fmtDate(risk.date)}.</p>
+          <h3>{risk.title ?? "Predicted outbreak risk"}</h3>
+          <p className="muted small">{risk.explain ?? `Chance that fungal blight shows up in the next ${risk.horizon_days} days, from the scan of ${fmtDate(risk.date)}.`}</p>
           {prevRisk && (() => {
             const d = s.acres_high - prevRisk.summary.acres_high;
             return <p className={"delta " + (d > 0.05 ? "up" : d < -0.05 ? "down" : "")}>{d > 0.05 ? "▲" : d < -0.05 ? "▼" : "•"} {d >= 0 ? "+" : "−"}{fmtAcres(Math.abs(d))} high-risk acres since {fmtDate(prevRisk.date)}</p>;
           })()}
           <dl className="stats">
-            <div><dt>High-risk area, acres</dt><dd className="num bad">{fmtAcres(s.acres_high)}</dd></div>
+            <div><dt>{risk.kind === "stress_index" ? "High-stress area, acres" : "High-risk area, acres"}</dt><dd className="num bad">{fmtAcres(s.acres_high)}</dd></div>
             <div><dt>Share of farm</dt><dd className="num">{((s.acres_high / meta.farm_acres) * 100).toFixed(1)}<span>%</span></dd></div>
             <div><dt>Peak risk</dt><dd className="num" style={{ color: riskText(s.peak_risk) }}>{s.peak_risk.toFixed(2)}</dd></div>
             <div><dt>Moderate, acres</dt><dd className="num">{fmtAcres(s.acres_moderate)}</dd></div>
@@ -44,7 +44,7 @@ export default function Sidebar({ meta, fields, risk, prevRisk, history, index, 
               <li key={z.id}>
                 <button type="button" className="zone-row" onClick={() => onZone(z)}>
                   <span className="zone-id" style={{ background: riskSolid(z.peak) }}>{z.id}</span>
-                  <span className="fname">{z.field ?? "Between fields"}<small>{z.crop ? `${z.crop}, ` : ""}peak {z.peak.toFixed(2)}</small></span>
+                  <span className="fname">{z.field ?? "Outside field boundaries"}<small>{z.crop ? `${z.crop}, ` : ""}peak {z.peak.toFixed(2)}</small></span>
                   <span className="num">{fmtAcres(z.acres)} ac</span>
                 </button>
               </li>
@@ -56,12 +56,12 @@ export default function Sidebar({ meta, fields, risk, prevRisk, history, index, 
 
       <section className="panel">
         <h2>{meta.name}</h2>
-        <p className="muted small">Hyperspectral scan of a 1,000-acre farm: {meta.bands} bands, {meta.pixel_size_m} m pixels. All imagery on this page is simulated.</p>
+        <p className="muted small">{meta.description ?? `Hyperspectral scan of a 1,000-acre farm: ${meta.bands} bands, ${meta.pixel_size_m} m pixels. All imagery on this page is simulated.`}</p>
       </section>
 
       <section className="panel">
         <h3>Layers</h3>
-        <label className="toggle"><input type="checkbox" checked={layers.risk} onChange={(e) => setLayers({ ...layers, risk: e.target.checked })} /><span>Disease risk heatmap</span></label>
+        <label className="toggle"><input type="checkbox" checked={layers.risk} onChange={(e) => setLayers({ ...layers, risk: e.target.checked })} /><span>{risk.kind === "stress_index" ? "Stress index heatmap" : "Disease risk heatmap"}</span></label>
         <label className="slider" style={{ opacity: layers.risk ? 1 : 0.45 }}>
           <span>Heatmap opacity</span>
           <input type="range" min="20" max="100" value={Math.round(layers.riskOpacity * 100)} disabled={!layers.risk} onChange={(e) => setLayers({ ...layers, riskOpacity: e.target.value / 100 })} aria-label="Heatmap opacity" />
@@ -75,7 +75,7 @@ export default function Sidebar({ meta, fields, risk, prevRisk, history, index, 
         <label className="toggle"><input type="checkbox" checked={layers.labels} onChange={(e) => setLayers({ ...layers, labels: e.target.checked })} /><span>Field labels</span></label>
       </section>
 
-      <section className="panel">
+      {fields.length > 0 && <section className="panel">
         <h3>Fields, highest risk first</h3>
         <ul className="fields" role="listbox" aria-label="Fields">
           {sorted.map((f) => {
@@ -85,7 +85,7 @@ export default function Sidebar({ meta, fields, risk, prevRisk, history, index, 
                 <button type="button" role="option" aria-selected={selected === p.name}
                   className={"field-row" + (selected === p.name ? " selected" : "") + (hovered === p.name ? " hover" : "")}
                   onClick={() => onSelect(selected === p.name ? null : p.name)}>
-                  <i style={{ background: meta.crops[p.crop] }} />
+                  <i style={{ background: meta.crops?.[p.crop] ?? "#56655c" }} />
                   <span className="fname">{p.name}<small>{p.crop}, {fmtAcres(p.acres)} ac</small></span>
                   {st && <span className="risk-chip num" style={{ background: riskSolid(st.peak_risk) }} title={`Peak risk ${st.peak_risk.toFixed(2)}`}>{st.peak_risk.toFixed(2)}</span>}
                 </button>
@@ -101,14 +101,16 @@ export default function Sidebar({ meta, fields, risk, prevRisk, history, index, 
             <span>{fmtAcres(activeStats.acres_high)} acres at high risk, {fmtAcres(activeStats.acres_moderate)} at moderate risk</span>
           </div>
         )}
-      </section>
+      </section>}
 
-      <section className="panel">
-        <h3>Area at risk over time</h3>
-        <TrendChart history={history.history} index={index} onIndex={onIndex} />
-      </section>
+      {history.dates.length > 1 && (
+        <section className="panel">
+          <h3>Area at risk over time</h3>
+          <TrendChart history={history.history} index={index} onIndex={onIndex} />
+        </section>
+      )}
 
-      {history.signals && (
+      {history.signals && history.dates.length > 1 && (
         <section className="panel">
           <h3>Spectral signals</h3>
           <SignalChart signals={history.signals} dates={history.dates} index={index} />
