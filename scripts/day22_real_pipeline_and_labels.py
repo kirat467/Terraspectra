@@ -12,3 +12,7 @@ N_CANDIDATES = 30            # field-visit points (half stress candidates, half 
 STRESS_Z = -1.5              # stress candidate = vegetation score below this z-score
 MIN_POINTS_PER_CLASS = 30    # minimum usable label points per class
 # ==================================================================
+if not os.path.exists("data/interim/real_scene_meta.json"):
+    raise SystemExit("Run day21_real_emit_scene.py first (real_scene_meta.json not found).")
+meta = json.load(open("data/interim/real_scene_meta.json"))
+subprocess.run([sys.executable, "-m", "pip", "install", "-q", "scikit-learn"])
