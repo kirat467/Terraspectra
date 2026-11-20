@@ -93,3 +93,18 @@ def run(script):
     r = subprocess.run([sys.executable, script])
     if r.returncode != 0:
         raise SystemExit(f"\n{script} FAILED. Send me the error shown above.")
+
+# ============================================================
+# PART B: run the pipeline on the real scene
+# ============================================================
+if RUN_PIPELINE:
+    if os.path.exists("data/interim/cleaned_reprojected.tif") and os.path.exists("data/interim/smoothed_reflectance.npy"):
+        mt = max(os.path.getmtime("data/interim/real_scene_cube.npy"), os.path.getmtime(P789))
+        if os.path.getmtime("data/interim/smoothed_reflectance.npy") > mt:
+            print("\nPipeline outputs are already newer than the real scene -> skipping Part B (set RUN_PIPELINE=True and delete data/interim/smoothed_reflectance.npy to force)")
+        else:
+            for sc in ("scripts/day7_8_9_all.py", "scripts/day10_11_12_all.py", "scripts/day13_14_15_all.py"):
+                run(sc)
+    else:
+        for sc in ("scripts/day7_8_9_all.py", "scripts/day10_11_12_all.py", "scripts/day13_14_15_all.py"):
+            run(sc)
