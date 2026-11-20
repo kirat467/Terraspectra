@@ -61,3 +61,10 @@ ok3 = patch(P789,
     '    src_crs, res = "EPSG:32645", 60.0\n'
     '    src_tf = from_origin(500000, 2840000, res, res)',
     'D["name"] == "EMIT_real"', "edit 3: real georeference")
+# config: EMIT native pixel ~0.0005 deg
+cfg_p = "config/config.yaml"
+s = open(cfg_p, encoding="utf-8").read()
+s2 = re.sub(r"target_resolution:\s*[\d.]+", "target_resolution: 0.0005", s)
+if s2 != s:
+    open(cfg_p, "w", encoding="utf-8").write(s2)
+print("  [config] target_resolution = 0.0005")
