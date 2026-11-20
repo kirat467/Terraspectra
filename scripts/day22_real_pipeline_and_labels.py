@@ -265,3 +265,60 @@ if geo and not (os.path.exists(pts_path) and os.path.getsize(pts_path) > 30):
             print(f"Converted polygons -> {pts_path} ({len(out_rows)} points)")
     except Exception as e:
         print("Polygon conversion failed:", e)
+        # --- validate field_points.csv ---
+labels_ok = False
+if os.path.exists(pts_path) and os.path.getsize(pts_path) > 30:
+    print("\n===== Validating", pts_path, "=====")
+    df = pd.read_csv(pts_path)
+    if not {"lat", "lon", "label"}.issubset(df.columns):
+        print("ERROR: CSV needs columns lat,lon,label. Found:", list(df.columns))
+    else:
+        df = df.dropna(subset=["lat", "lon", "label"])
+        inside = df["lon"].between(bb[0], bb[2]) & df["lat"].between(bb[1], bb[3])
+        print(f"Points: {len(df)} | inside scene box: {int(inside.sum())} | outside: {int((~inside).sum())}")
+        d2 = df[inside].copy()
+        if len(d2):
+            rr, cc = rasterio.transform.rowcol(tf, d2["lon"].values, d2["lat"].values)
+            rr, cc = np.array(rr), np.array(cc)
+            inb = (rr >= 0) & (rr < H) & (cc >= 0) & (cc < W)
+            ok_px = np.zeros(len(d2), bool)
+            ok_px[inb] = valid[rr[inb], cc[inb]]
+            print(f"On valid (not cloud/masked) pixels: {int(ok_px.sum())} of {len(d2)}")
+            d2 = d2[ok_px]
+        cnt = d2["label"].value_counts().sort_index()
+        print("Usable points per class:\n", cnt.to_string() if len(cnt) else "none")
+        enough = cnt[cnt >= MIN_POINTS_PER_CLASS]
+        labels_ok = len(enough) >= 2
+        if not labels_ok:
+            print(f"NOT ENOUGH labels yet: need at least 2 classes with >= {MIN_POINTS_PER_CLASS} usable points each.")
+        else:
+            print(f"Labels OK: {len(enough)} classes with >= {MIN_POINTS_PER_CLASS} points")
+else:
+    print("\nNo labels yet (data/labels/field_points.csv missing).")
+
+# ============================================================
+# PART D: if labels are OK, finish Day 15-20 on the real scene
+# ============================================================
+if labels_ok and RUN_AFTER_LABELS:
+    sparse = len(d2) / max(valid.sum(), 1) < 0.05
+    if sparse and os.path.exists("scripts/day16_17_18_all.py"):
+        s = open("scripts/day16_17_18_all.py", encoding="utf-8").read()
+        s = re.sub(r"^PATCH_SIZE = None", "PATCH_SIZE = 8", s, flags=re.M)
+        s = re.sub(r"^MIN_LABELED_FRACTION = [\d.]+", "MIN_LABELED_FRACTION = 0.005", s, flags=re.M)
+        open("scripts/day16_17_18_all.py", "w", encoding="utf-8").write(s)
+        print("\nSparse point labels -> patch size 8, min labelled fraction 0.005 (patch label = class of the labelled pixel inside it)")
+    for sc in ("scripts/day13_14_15_all.py", "scripts/day16_17_18_all.py", "scripts/day19_20_all.py"):
+        run(sc)
+
+try:
+    subprocess.run(["git", "add", "-A"], check=True)
+    subprocess.run(["git", "commit", "-m", "Day 22: real-scene pipeline, label helpers"], check=False)
+    if subprocess.run(["git", "remote"], capture_output=True, text=True).stdout.strip():
+        subprocess.run(["git", "push"], check=False)
+except Exception as e:
+    print("Git issue:", e)
+
+print("\nDAY 22 DONE.")
+if not labels_ok:
+    print("NEXT: get disease labels (mentor / field visit). Give the mentor data/labels/field_visit_candidates.kml and README_label_area.txt.")
+    print("Save labels as data/labels/field_points.csv (lat,lon,label) or a GeoJSON/SHP with a 'label' column in data/labels/, then re-run this script.")
