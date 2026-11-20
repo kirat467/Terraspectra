@@ -167,19 +167,33 @@ def components(mask, min_cells=12):
     return groups
 
 
-def build_payload(risk, date, meta, geojson, horizon_days=21):
-    """The risk_<date>.json document (see frontend/README.md for the format)."""
+def build_payload(risk, date, meta, geojson, horizon_days=21, crop_mask=None):
+    """The risk_<date>.json document (see frontend/README.md for the format).
+
+    crop_mask: optional boolean grid of the pixels to report on. Without it, pixels inside the field polygons are used.
+    A scene with no field polygons (empty geojson) needs a crop_mask."""
     risk = np.asarray(risk, dtype=np.float64)
     rows, cols = risk.shape
     west, south, east, north = meta["bounds"]
-    crop, owner = field_masks(geojson, meta["bounds"], rows, cols)
+    if geojson["features"]:
+        crop, owner = field_masks(geojson, meta["bounds"], rows, cols)
+    else:
+        crop, owner = np.zeros((rows, cols), dtype=bool), np.full((rows, cols), -1, dtype=int)
+    if crop_mask is not None:
+        crop = np.asarray(crop_mask, dtype=bool)
+        if crop.shape != risk.shape:
+            raise ValueError("crop_mask must have the same shape as the risk grid")
+    if not crop.any():
+        raise ValueError("No crop pixels to report on")
     acres_px = meta["pixel_size_m"] ** 2 / SQ_M_PER_ACRE
     features = geojson["features"]
 
     zones = []
     for cells in components((risk >= HIGH) & crop):
         ys, xs = np.array([c[0] for c in cells]), np.array([c[1] for c in cells])
-        main = features[int(np.bincount(owner[ys, xs]).argmax())]["properties"]
+        owners = owner[ys, xs]
+        owners = owners[owners >= 0]
+        main = features[int(np.bincount(owners).argmax())]["properties"] if owners.size else {"name": None, "crop": ""}
         zones.append({"field": main["name"], "crop": main["crop"], "acres": round(len(cells) * acres_px, 1),
                       "peak_risk": round(float(risk[ys, xs].max()), 2),
                       "center": [round(west + (xs.mean() + 0.5) / cols * (east - west), 6),

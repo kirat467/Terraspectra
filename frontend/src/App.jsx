@@ -10,9 +10,11 @@ import { fitFarm, fitField, fmtAcres, fmtDate } from "./lib/geo.js";
 import { cellAt, riskImage, riskLabel } from "./lib/risk.js";
 import { acresPerCell, cellToLonLat, fieldAt, findZones, outlineImage } from "./lib/zones.js";
 
-const DATA = `${import.meta.env.BASE_URL}data/`;
+// ?data=real shows the real-scene folder (public/data_real) made by scripts/real_scene_to_dashboard.py
+const DATASET = new URLSearchParams(window.location.search).get("data") === "real" ? "data_real" : "data";
+const DATA = `${import.meta.env.BASE_URL}${DATASET}/`;
 const VIEWS = [new MapView({ id: "map", repeat: false })];
-const LIMITS = { minZoom: 11, maxZoom: 19 };
+const DEFAULT_LIMITS = { minZoom: 11, maxZoom: 19 };
 const CONTROLLER = { dragRotate: false, touchRotate: false, keyboard: false };
 const getJson = (url) => fetch(url).then((r) => { if (!r.ok) throw new Error(`${url} (${r.status})`); return r.json(); });
 
@@ -32,6 +34,7 @@ export default function App() {
   const mapBox = useRef(null);
   const size = useRef({ width: 900, height: 600 });
   const ready = useRef(false);
+  const limits = useRef(DEFAULT_LIMITS);          // minimum zoom adapts to the size of the scene (a 30 km scene needs a wider view than a farm)
 
   // load the farm files and the latest risk map
   useEffect(() => {
@@ -50,7 +53,9 @@ export default function App() {
       size.current = { width: entry.contentRect.width, height: entry.contentRect.height };
       if (meta && !ready.current && size.current.width > 0) {
         ready.current = true;
-        setViewState({ ...fitFarm(meta, size.current.width, size.current.height), ...LIMITS });
+        const fit = fitFarm(meta, size.current.width, size.current.height);
+        limits.current = { minZoom: Math.min(DEFAULT_LIMITS.minZoom, fit.zoom - 1), maxZoom: DEFAULT_LIMITS.maxZoom };
+        setViewState({ ...fit, ...limits.current });
       }
     });
     ro.observe(mapBox.current);
@@ -58,7 +63,7 @@ export default function App() {
   }, [meta]);
 
   const fly = useCallback((target) => {
-    setViewState((vs) => ({ ...vs, ...target, ...LIMITS, transitionDuration: 900, transitionInterpolator: new FlyToInterpolator({ speed: 1.6 }) }));
+    setViewState((vs) => ({ ...vs, ...target, ...limits.current, transitionDuration: 900, transitionInterpolator: new FlyToInterpolator({ speed: 1.6 }) }));
   }, []);
 
   const showWholeFarm = useCallback(() => {
@@ -67,7 +72,7 @@ export default function App() {
   }, [meta, fly]);
 
   const zoomBy = useCallback((d) => {
-    setViewState((vs) => ({ ...vs, zoom: Math.min(LIMITS.maxZoom, Math.max(LIMITS.minZoom, vs.zoom + d)), transitionDuration: 250, transitionInterpolator: new LinearInterpolator(["zoom"]) }));
+    setViewState((vs) => ({ ...vs, zoom: Math.min(limits.current.maxZoom, Math.max(limits.current.minZoom, vs.zoom + d)), transitionDuration: 250, transitionInterpolator: new LinearInterpolator(["zoom"]) }));
   }, []);
 
   const features = fieldData?.features ?? [];
@@ -163,8 +168,8 @@ export default function App() {
         </div>
         <div className="top-right">
           <span className="chip">Scan <b className="num">{fmtDate(risk.date)}</b></span>
-          <span className="chip">Forecast <b className="num">next {risk.horizon_days} days</b></span>
-          <span className="chip warn">Simulated data</span>
+          {risk.kind !== "stress_index" && <span className="chip">Forecast <b className="num">next {risk.horizon_days} days</b></span>}
+          <span className={"chip" + (meta.simulated === false ? "" : " warn")}>{meta.simulated === false ? (meta.source ?? "Real scene") : "Simulated data"}</span>
         </div>
       </header>
 
@@ -175,7 +180,7 @@ export default function App() {
           <DeckGL
             views={VIEWS}
             viewState={viewState}
-            onViewStateChange={({ viewState: vs }) => setViewState({ ...vs, ...LIMITS })}
+            onViewStateChange={({ viewState: vs }) => setViewState({ ...vs, ...limits.current })}
             controller={CONTROLLER}
             layers={deckLayers}
             getCursor={({ isDragging, isHovering }) => (isDragging ? "grabbing" : isHovering ? "pointer" : "grab")}
@@ -186,8 +191,8 @@ export default function App() {
             onClick={(info) => select(info.object && info.object.properties.name !== selected ? info.object.properties.name : null)}
           />
         )}
-        {viewState && layers.risk && <RiskLegend horizon={risk.horizon_days} />}
-        {viewState && <MapControls viewState={viewState} cursor={cursor} cursorRisk={hover ? cell?.value : null} onZoom={zoomBy} onReset={showWholeFarm} />}
+        {viewState && layers.risk && <RiskLegend horizon={risk.horizon_days} title={risk.legend_title} />}
+        {viewState && <MapControls simulated={meta.simulated !== false} source={meta.source} viewState={viewState} cursor={cursor} cursorRisk={hover ? cell?.value : null} onZoom={zoomBy} onReset={showWholeFarm} />}
         {hoverFeature && (
           <div className="tooltip" style={{ left: hover.x + 14, top: hover.y + 14 }}>
             <b>{hoverFeature.properties.name}</b>
