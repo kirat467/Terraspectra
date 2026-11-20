@@ -108,3 +108,69 @@ if RUN_PIPELINE:
     else:
         for sc in ("scripts/day7_8_9_all.py", "scripts/day10_11_12_all.py", "scripts/day13_14_15_all.py"):
             run(sc)
+# ============================================================
+# PART C: label helpers
+# ============================================================
+import numpy as np
+import pandas as pd
+import rasterio
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+from sklearn.decomposition import PCA
+from sklearn.cluster import KMeans
+
+os.makedirs("data/labels", exist_ok=True)
+os.makedirs("reports/figures", exist_ok=True)
+need = ["data/interim/cleaned_reprojected.tif", "data/interim/smoothed_reflectance.npy", "data/interim/wavelengths_clean.npy"]
+for p in need:
+    if not os.path.exists(p):
+        raise SystemExit(f"{p} not found. Pipeline did not finish; set RUN_PIPELINE = True.")
+with rasterio.open(need[0]) as s_:
+    tf, crs = s_.transform, s_.crs
+refl = np.load(need[1]).astype("float32")
+wl = np.load(need[2])
+B, H, W = refl.shape
+valid = ~np.isnan(refl).any(axis=0)
+print(f"\n===== PART C: label helpers | grid {H}x{W} | valid pixels {valid.mean() * 100:.1f}% | CRS {crs} =====")
+
+
+def bnd(nm):
+    return int(np.argmin(np.abs(wl - nm)))
+
+
+def nd(a, b):
+    return (a - b) / (a + b + 1e-8)
+
+
+def to_lonlat(r, c):
+    x, y = tf * (np.asarray(c) + 0.5, np.asarray(r) + 0.5)
+    if crs is not None and crs.to_string() != "EPSG:4326":
+        from rasterio.warp import transform as wtf
+        x, y = wtf(crs, "EPSG:4326", list(np.atleast_1d(x)), list(np.atleast_1d(y)))
+    return np.asarray(x), np.asarray(y)
+
+
+def stretch(a):
+    lo, hi = np.nanpercentile(a, (2, 98))
+    return np.clip(np.nan_to_num((a - lo) / (hi - lo + 1e-9)), 0, 1)
+
+
+# --- vegetation score (NDVI + PRI) ---
+ndvi = nd(refl[bnd(800)], refl[bnd(670)])
+pri = nd(refl[bnd(531)], refl[bnd(570)])
+veg = valid & (ndvi > 0.3)
+if veg.sum() < 500:
+    print("WARNING: very little vegetation in this crop (NDVI>0.3). Using all valid pixels instead.")
+    veg = valid.copy()
+
+
+def z(a):
+    m, s_ = np.nanmean(a[veg]), np.nanstd(a[veg]) + 1e-9
+    return (a - m) / s_
+
+
+score = (z(ndvi) + z(pri)) / 2
+stress = veg & (score < STRESS_Z)
+healthy = veg & (score > 0)
+print(f"Vegetation pixels: {veg.sum()} | stress candidates: {stress.sum()} ({stress.sum() / max(veg.sum(), 1) * 100:.1f}%) | healthy refs: {healthy.sum()}")
