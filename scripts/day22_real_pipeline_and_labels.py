@@ -68,3 +68,28 @@ s2 = re.sub(r"target_resolution:\s*[\d.]+", "target_resolution: 0.0005", s)
 if s2 != s:
     open(cfg_p, "w", encoding="utf-8").write(s2)
 print("  [config] target_resolution = 0.0005")
+# weather window + location from the scene
+bb = meta["bbox_lonlat"]
+c_lon, c_lat = (bb[0] + bb[2]) / 2, (bb[1] + bb[3]) / 2
+sd_txt = meta.get("scene_date", "unknown")
+P1315 = "scripts/day13_14_15_all.py"
+if os.path.exists(P1315):
+    s = open(P1315, encoding="utf-8").read()
+    s = re.sub(r"^LAT, LON = .*$", f"LAT, LON = {c_lat:.4f}, {c_lon:.4f}", s, flags=re.M)
+    if sd_txt.isdigit():
+        sd = datetime.strptime(sd_txt, "%Y%m%d")
+        start = (sd - timedelta(days=60)).strftime("%Y%m%d")
+        end = min(sd + timedelta(days=7), datetime.now() - timedelta(days=5)).strftime("%Y%m%d")
+        s = re.sub(r"^WEATHER_START, WEATHER_END = .*$", f'WEATHER_START, WEATHER_END = "{start}", "{end}"', s, flags=re.M)
+        print(f"  [weather] location {c_lat:.3f},{c_lon:.3f} | window {start} -> {end} (60 days before scene date)")
+    open(P1315, "w", encoding="utf-8").write(s)
+
+if not (ok1 and ok2 and ok3):
+    raise SystemExit("\nSome edits could not be applied automatically. Apply them manually (see previous message), then re-run.")
+
+
+def run(script):
+    print(f"\n>>>>>>>>>> {script}")
+    r = subprocess.run([sys.executable, script])
+    if r.returncode != 0:
+        raise SystemExit(f"\n{script} FAILED. Send me the error shown above.")
