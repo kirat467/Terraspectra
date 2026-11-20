@@ -174,3 +174,12 @@ score = (z(ndvi) + z(pri)) / 2
 stress = veg & (score < STRESS_Z)
 healthy = veg & (score > 0)
 print(f"Vegetation pixels: {veg.sum()} | stress candidates: {stress.sum()} ({stress.sum() / max(veg.sum(), 1) * 100:.1f}%) | healthy refs: {healthy.sum()}")
+# --- unsupervised zones ---
+rng = np.random.default_rng(42)
+Xv = refl[:, valid].T
+samp = Xv[rng.choice(len(Xv), size=min(20000, len(Xv)), replace=False)]
+pca = PCA(n_components=min(10, B)).fit(samp)
+km = KMeans(n_clusters=K_ZONES, n_init=10, random_state=42).fit(pca.transform(samp))
+zones = np.full((H, W), -1, dtype="int16")
+zones[valid] = km.predict(pca.transform(Xv))
+del Xv
