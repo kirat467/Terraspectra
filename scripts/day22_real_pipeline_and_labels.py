@@ -227,3 +227,41 @@ ax[2].legend(fontsize=7); ax[2].set_title("Stress candidates (orange) + field-vi
 for a in ax:
     a.axis("off")
 plt.tight_layout(); plt.savefig("reports/figures/d22_zones_and_stress.png", dpi=150); plt.close()
+# --- convert polygons (GeoJSON / SHP / GPKG) to field_points.csv ---
+pts_path = "data/labels/field_points.csv"
+geo = [p for ext in ("geojson", "gpkg", "shp") for p in glob.glob(f"data/labels/*.{ext}")]
+if geo and not (os.path.exists(pts_path) and os.path.getsize(pts_path) > 30):
+    print("\nPolygon label file found:", geo[0])
+    try:
+        subprocess.run([sys.executable, "-m", "pip", "install", "-q", "geopandas"])
+        import geopandas as gpd
+        from rasterio.features import rasterize
+        gdf = gpd.read_file(geo[0]).to_crs(crs)
+        col = next((c for c in ("label", "class", "disease", "Label", "Class", "Disease") if c in gdf.columns), None)
+        if col is None:
+            print("Need a column named label/class/disease in the polygon file. Columns found:", list(gdf.columns))
+        else:
+            vals = gdf[col]
+            mapping = None
+            if vals.dtype == object:
+                cats = sorted(vals.astype(str).unique())
+                mapping = {c: i + 1 for i, c in enumerate(cats)}
+                ids = vals.astype(str).map(mapping)
+                json.dump(mapping, open("data/labels/label_text_mapping.json", "w"), indent=2)
+                print("Text labels mapped:", mapping)
+            else:
+                ids = vals.astype(int)
+            shapes = [(g, int(v)) for g, v in zip(gdf.geometry, ids) if g is not None and not g.is_empty]
+            ras = rasterize(shapes, out_shape=(H, W), transform=tf, fill=0, dtype="int32")
+            out_rows = []
+            for cl in np.unique(ras[ras > 0]):
+                rr, cc = np.where(ras == cl)
+                if len(rr) > 3000:
+                    pick_i = rng.choice(len(rr), 3000, replace=False)
+                    rr, cc = rr[pick_i], cc[pick_i]
+                lon, lat = to_lonlat(rr, cc)
+                out_rows += [{"lat": a, "lon": b, "label": int(cl)} for a, b in zip(lat, lon)]
+            pd.DataFrame(out_rows).to_csv(pts_path, index=False)
+            print(f"Converted polygons -> {pts_path} ({len(out_rows)} points)")
+    except Exception as e:
+        print("Polygon conversion failed:", e)
