@@ -16,3 +16,48 @@ if not os.path.exists("data/interim/real_scene_meta.json"):
     raise SystemExit("Run day21_real_emit_scene.py first (real_scene_meta.json not found).")
 meta = json.load(open("data/interim/real_scene_meta.json"))
 subprocess.run([sys.executable, "-m", "pip", "install", "-q", "scikit-learn"])
+# ============================================================
+# PART A: auto-patch the earlier scripts (backup .bak, safe to re-run)
+# ============================================================
+def patch(path, old, new, tag, label):
+    if not os.path.exists(path):
+        print(f"  [{label}] {path} not found"); return False
+    s = open(path, encoding="utf-8").read()
+    if tag in s:
+        print(f"  [{label}] already patched"); return True
+    if old not in s:
+        print(f"  [{label}] COULD NOT patch (your file text differs). Apply this edit manually."); return False
+    if not os.path.exists(path + ".bak"):
+        shutil.copy(path, path + ".bak")
+    open(path, "w", encoding="utf-8").write(s.replace(old, new, 1))
+    print(f"  [{label}] patched"); return True
+
+
+print("\n===== PART A: patching scripts for the real scene =====")
+P789 = "scripts/day7_8_9_all.py"
+ok1 = patch(P789,
+    'def load_data():\n    nc_files = glob.glob("data/raw/emit/*.nc")',
+    'def load_data():\n'
+    '    if os.path.exists("data/interim/real_scene_cube.npy"):\n'
+    '        print("Using REAL EMIT scene (real_scene_cube.npy)")\n'
+    '        return dict(name="EMIT_real", sensor="EMIT",\n'
+    '                    cube=np.load("data/interim/real_scene_cube.npy"),\n'
+    '                    wl=np.load("data/interim/real_scene_wl.npy"), gt=None,\n'
+    '                    good=np.load("data/interim/real_scene_good.npy"))\n'
+    '    nc_files = glob.glob("data/raw/emit/*.nc")',
+    'real_scene_cube.npy"):', "edit 1: loader")
+ok2 = patch(P789,
+    'if sensor == "EMIT":\n    def sel(lo, hi):',
+    'if sensor == "EMIT" and D["name"] != "EMIT_real":\n    def sel(lo, hi):',
+    'D["name"] != "EMIT_real"', "edit 2: skip heuristic cloud mask")
+ok3 = patch(P789,
+    'if sensor == "EMIT":\n    src_crs, res = "EPSG:32645", 60.0\n    src_tf = from_origin(500000, 2840000, res, res)',
+    'if D["name"] == "EMIT_real":\n'
+    '    from affine import Affine\n'
+    '    _m = json.load(open("data/interim/real_scene_meta.json"))\n'
+    '    src_crs, res = "EPSG:4326", 0.0005\n'
+    '    src_tf = Affine(*_m["transform"])\n'
+    'elif sensor == "EMIT":\n'
+    '    src_crs, res = "EPSG:32645", 60.0\n'
+    '    src_tf = from_origin(500000, 2840000, res, res)',
+    'D["name"] == "EMIT_real"', "edit 3: real georeference")
