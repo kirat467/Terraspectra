@@ -183,3 +183,47 @@ km = KMeans(n_clusters=K_ZONES, n_init=10, random_state=42).fit(pca.transform(sa
 zones = np.full((H, W), -1, dtype="int16")
 zones[valid] = km.predict(pca.transform(Xv))
 del Xv
+# --- field visit candidates ---
+def pick(mask, n, min_dist=8):
+    rr, cc = np.where(mask)
+    chosen = []
+    for k in rng.permutation(len(rr)):
+        r, c = int(rr[k]), int(cc[k])
+        if all((r - a) ** 2 + (c - b) ** 2 >= min_dist ** 2 for a, b in chosen):
+            chosen.append((r, c))
+            if len(chosen) >= n:
+                break
+    return chosen
+
+
+nh = N_CANDIDATES // 2
+cand = [("stress_candidate", r, c) for r, c in pick(stress, nh)] + [("healthy_reference", r, c) for r, c in pick(healthy, N_CANDIDATES - nh)]
+rows = []
+for i, (t, r, c) in enumerate(cand, 1):
+    lon, lat = to_lonlat(r, c)
+    rows.append({"id": i, "lat": round(float(lat), 6), "lon": round(float(lon), 6), "type": t,
+                 "veg_score_z": round(float(score[r, c]), 2), "ndvi": round(float(ndvi[r, c]), 3),
+                 "zone": int(zones[r, c]), "row": r, "col": c,
+                 "note": "VERIFY IN FIELD - screening point, NOT a disease label"})
+cand_df = pd.DataFrame(rows)
+cand_df.to_csv("data/labels/field_visit_candidates.csv", index=False)
+with open("data/labels/field_visit_candidates.kml", "w", encoding="utf-8") as f:
+    f.write('<?xml version="1.0" encoding="UTF-8"?><kml xmlns="http://www.opengis.net/kml/2.2"><Document>\n')
+    for r in rows:
+        f.write(f'<Placemark><name>{r["id"]}_{r["type"]}</name><description>NDVI {r["ndvi"]}, z {r["veg_score_z"]}. Verify in field.</description>'
+                f'<Point><coordinates>{r["lon"]},{r["lat"]},0</coordinates></Point></Placemark>\n')
+    f.write("</Document></kml>\n")
+print(f"Saved {len(rows)} candidate points -> data/labels/field_visit_candidates.csv and .kml (open the .kml in Google Earth)")
+
+rgb = np.dstack([stretch(refl[bnd(650)]), stretch(refl[bnd(550)]), stretch(refl[bnd(470)])])
+fig, ax = plt.subplots(1, 3, figsize=(17, 6))
+ax[0].imshow(rgb); ax[0].set_title("RGB")
+ax[1].imshow(np.ma.masked_equal(zones, -1), cmap="tab10"); ax[1].set_title(f"Unsupervised spectral zones (k={K_ZONES}) - NOT disease classes")
+ax[2].imshow(rgb); ax[2].imshow(np.ma.masked_where(~stress, stress), cmap="autumn", alpha=0.6)
+for t, col in (("stress_candidate", "red"), ("healthy_reference", "cyan")):
+    d = cand_df[cand_df["type"] == t]
+    ax[2].scatter(d["col"], d["row"], s=25, c=col, edgecolors="k", label=t)
+ax[2].legend(fontsize=7); ax[2].set_title("Stress candidates (orange) + field-visit points")
+for a in ax:
+    a.axis("off")
+plt.tight_layout(); plt.savefig("reports/figures/d22_zones_and_stress.png", dpi=150); plt.close()
