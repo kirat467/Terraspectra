@@ -1,0 +1,155 @@
+{
+  "cube": "large_cube_5.npy",
+  "shape": [
+    1024,
+    1024,
+    200
+  ],
+  "cube_file_mb": 419.4,
+  "baseline": {
+    "python_numpy_mb": 31.1,
+    "python_numpy_torch_mb": 511.5
+  },
+  "load": [
+    {
+      "setting": "full",
+      "batch": 16,
+      "peak_mb": 638.3,
+      "heap_mb": 630.3,
+      "seconds": 0.38
+    },
+    {
+      "setting": "full",
+      "batch": 64,
+      "peak_mb": 638.2,
+      "heap_mb": 630.3,
+      "seconds": 0.35
+    },
+    {
+      "setting": "full",
+      "batch": 256,
+      "peak_mb": 638.3,
+      "heap_mb": 630.3,
+      "seconds": 0.38
+    },
+    {
+      "setting": "full",
+      "batch": 1024,
+      "peak_mb": 638.3,
+      "heap_mb": 630.3,
+      "seconds": 0.47
+    },
+    {
+      "setting": "full",
+      "batch": 4096,
+      "peak_mb": 1202.5,
+      "heap_mb": 977.8,
+      "seconds": 0.91
+    },
+    {
+      "setting": "mmap",
+      "batch": 16,
+      "peak_mb": 352.8,
+      "heap_mb": 210.9,
+      "seconds": 0.19
+    },
+    {
+      "setting": "mmap",
+      "batch": 64,
+      "peak_mb": 398.7,
+      "heap_mb": 210.9,
+      "seconds": 0.19
+    },
+    {
+      "setting": "mmap",
+      "batch": 256,
+      "peak_mb": 518.4,
+      "heap_mb": 210.9,
+      "seconds": 0.2
+    },
+    {
+      "setting": "mmap",
+      "batch": 1024,
+      "peak_mb": 626.9,
+      "heap_mb": 210.9,
+      "seconds": 0.32
+    },
+    {
+      "setting": "mmap",
+      "batch": 4096,
+      "peak_mb": 1202.0,
+      "heap_mb": 558.3,
+      "seconds": 0.68
+    }
+  ],
+  "project": [
+    {
+      "strip": 8,
+      "peak_mb": 619.6,
+      "heap_mb": 210.9,
+      "seconds": 0.79
+    },
+    {
+      "strip": 16,
+      "peak_mb": 619.6,
+      "heap_mb": 210.9,
+      "seconds": 0.69
+    },
+    {
+      "strip": 32,
+      "peak_mb": 619.6,
+      "heap_mb": 210.9,
+      "seconds": 0.7
+    },
+    {
+      "strip": 64,
+      "peak_mb": 670.6,
+      "heap_mb": 242.1,
+      "seconds": 0.83
+    },
+    {
+      "strip": 128,
+      "peak_mb": 909.6,
+      "heap_mb": 399.3,
+      "seconds": 1.08
+    },
+    {
+      "strip": 256,
+      "peak_mb": 1199.5,
+      "heap_mb": 713.9,
+      "seconds": 1.05
+    }
+  ],
+  "train": [
+    {
+      "batch": 16,
+      "peak_mb": 603.5,
+      "heap_mb": 68.2,
+      "seconds": 3.57
+    },
+    {
+      "batch": 64,
+      "peak_mb": 617.7,
+      "heap_mb": 68.2,
+      "seconds": 3.6
+    },
+    {
+      "batch": 256,
+      "peak_mb": 669.0,
+      "heap_mb": 68.2,
+      "seconds": 3.63
+    },
+    {
+      "batch": 1024,
+      "peak_mb": 810.7,
+      "heap_mb": 68.2,
+      "seconds": 3.95
+    },
+    {
+      "batch": 4096,
+      "peak_mb": 1494.8,
+      "heap_mb": 68.2,
+      "seconds": 4.36
+    }
+  ]
+}
