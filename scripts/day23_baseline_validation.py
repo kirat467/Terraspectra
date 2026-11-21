@@ -96,3 +96,31 @@ if len(yte) >= 10:
     accs = [accuracy_score(yte[i], p[i]) for i in (rng.integers(0, len(yte), len(yte)) for _ in range(N_BOOT))]
     ci = (float(np.percentile(accs, 2.5)), float(np.percentile(accs, 97.5)))
     print(f"\nRF test accuracy 95% bootstrap CI: {ci[0]:.3f} - {ci[1]:.3f} (n_test={len(yte)})")
+# ============================================================
+# 3. Leakage demo: random split vs spatial split
+# ============================================================
+print("\n===== Leakage demo: random vs spatial split =====")
+Xall = np.concatenate([Xtr, Xva, Xte]); yall = np.concatenate([ytr, yva, yte])
+mc = np.bincount(yall).min() if len(yall) else 0
+strat = yall if mc >= 2 else None
+Xa, Xb, ya, yb = train_test_split(Xall, yall, test_size=0.3, random_state=SEED, stratify=strat)
+rf_rand = RandomForestClassifier(n_estimators=300, class_weight="balanced", random_state=SEED, n_jobs=-1).fit(Xa, ya)
+rand_acc = accuracy_score(yb, rf_rand.predict(Xb))
+rand_f1 = f1_score(yb, rf_rand.predict(Xb), average="macro", zero_division=0)
+sp = res[(res["model"] == "random_forest") & (res["split"] == "test")]
+spat_acc = float(sp["accuracy"].iloc[0]) if len(sp) else float("nan")
+spat_f1 = float(sp["macro_f1"].iloc[0]) if len(sp) else float("nan")
+print(f"Random split : accuracy {rand_acc:.3f} | macro-F1 {rand_f1:.3f}")
+print(f"Spatial split: accuracy {spat_acc:.3f} | macro-F1 {spat_f1:.3f}")
+gap = rand_acc - spat_acc
+print(f"Gap (random - spatial) = {gap:+.3f}  " + ("-> random split is optimistic (neighbouring patches leak information)" if gap > 0.02 else "-> small gap here (patches are non-overlapping; effect is stronger with dense labels)"))
+json.dump({"random_split": {"accuracy": rand_acc, "macro_f1": rand_f1},
+           "spatial_split": {"accuracy": spat_acc, "macro_f1": spat_f1}, "gap": gap},
+          open("data/metadata/leakage_demo.json", "w"), indent=2)
+
+fig, ax = plt.subplots(figsize=(5, 4))
+ax.bar(["random split", "spatial split"], [rand_acc, spat_acc], color=["tab:red", "tab:green"])
+ax.set_ylim(0, 1); ax.set_ylabel("accuracy (random forest)"); ax.set_title("Why the spatial split matters")
+for i, v in enumerate([rand_acc, spat_acc]):
+    ax.text(i, v + 0.02, f"{v:.2f}", ha="center")
+plt.tight_layout(); plt.savefig("reports/figures/d23_leakage_demo.png", dpi=150); plt.close()
