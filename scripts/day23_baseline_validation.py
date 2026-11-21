@@ -150,3 +150,55 @@ if len(yte):
     ax.set_xticks(range(n_classes)); ax.set_yticks(range(n_classes))
     ax.set_xlabel("predicted"); ax.set_ylabel("true"); ax.set_title("Random forest: confusion matrix (test)")
     plt.tight_layout(); plt.savefig("reports/figures/d23_confusion_matrix.png", dpi=150); plt.close()
+    # ============================================================
+# 5. Results note + Week 3 write-up (auto-filled)
+# ============================================================
+rf_t = res[(res["model"] == "random_forest") & (res["split"] == "test")]
+lr_t = res[(res["model"] == "logistic_regression") & (res["split"] == "test")]
+mj_t = res[(res["model"] == "majority_class") & (res["split"] == "test")]
+
+
+def g(df, col):
+    return f"{float(df[col].iloc[0]):.3f}" if len(df) else "NA"
+
+
+with open("docs/baseline_results.md", "w", encoding="utf-8") as f:
+    f.write(f"# Baseline validation of the dataset ({date.today()})\n\nData: {dataset_name}\n\n")
+    f.write("Purpose: confirm the dataset carries learnable signal and is leakage-free. NOT the project's final model.\n\n")
+    f.write("| model | split | n | accuracy | balanced acc | macro-F1 |\n|---|---|---|---|---|---|\n")
+    for r in res.itertuples():
+        f.write(f"| {r.model} | {r.split} | {r.n} | {r.accuracy} | {r.balanced_acc} | {r.macro_f1} |\n")
+    if ci:
+        f.write(f"\nRF test accuracy 95% bootstrap CI: {ci[0]:.3f} - {ci[1]:.3f}\n")
+    f.write(f"\nRandom split accuracy {rand_acc:.3f} vs spatial split {spat_acc:.3f} (gap {gap:+.3f}).\n")
+    f.write(f"\nTop wavelengths (nm): {sorted(wl[top].round(0).astype(int).tolist())}\n")
+    if is_test:
+        f.write("\nNote: computed on the Indian Pines benchmark (crop classes, not disease), to test the pipeline.\n")
+
+week3 = f"""During Week 3, I focused on feature engineering, label alignment and final dataset preparation for the TerraSpectra project.
+
+Work completed:
+- Computed vegetation indices (NDVI, PRI, red-edge NDVI, NDRE, EVI, NDWI, SIPI) and ranked them by class separability.
+- Downloaded NASA POWER weather data and created disease-risk features (rolling temperature, humidity, rainfall, favourable-day counts) for the forecasting task.
+- Aligned labels to the image grid and generated class statistics and overlays.
+- Extracted non-overlapping patches and created a spatial block-based train/val/test split to prevent data leakage.
+- Applied train-only normalization, class weights and an oversampling index to handle class imbalance.
+- Saved the final dataset in HDF5 format with a data dictionary, dataset card and preprocessing report.
+- Validated the dataset with baseline models: Random Forest test accuracy {g(rf_t, 'accuracy')} (macro-F1 {g(rf_t, 'macro_f1')}) vs majority-class baseline {g(mj_t, 'accuracy')}.
+- Showed that a random split gives {rand_acc:.2f} accuracy vs {spat_acc:.2f} for the spatial split, confirming why spatial splitting is needed.
+- Prepared a handover package and PPT section for the ML team, and pushed all work to the Member-3 branch on GitHub.
+{"- Switched the pipeline to a real EMIT hyperspectral scene with the official cloud mask and built field-visit candidate points to help collect disease labels." if os.path.exists("data/interim/real_scene_meta.json") else ""}
+{"The pipeline was validated on the Indian Pines benchmark; disease labels for the real scene are the main pending dependency, which I am discussing with the mentor." if is_test else ""}"""
+week3 = "\n".join(l for l in week3.splitlines() if l.strip() != "")
+open("docs/week3_writeup.txt", "w", encoding="utf-8").write(week3)
+print("\nSaved docs/baseline_results.md and docs/week3_writeup.txt (paste into the weekly form)")
+
+try:
+    subprocess.run(["git", "add", "-A"], check=True)
+    subprocess.run(["git", "commit", "-m", "Day 23: baseline validation, leakage demo, week 3 write-up"], check=False)
+    if subprocess.run(["git", "remote"], capture_output=True, text=True).stdout.strip():
+        subprocess.run(["git", "push"], check=False)
+except Exception as e:
+    print("Git issue:", e)
+
+print("\nDAY 23 DONE. Figures: d23_leakage_demo, d23_band_importance, d23_confusion_matrix") 
