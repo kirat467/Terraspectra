@@ -69,3 +69,20 @@ models = {
     "logistic_regression": LogisticRegression(max_iter=3000, class_weight="balanced"),
     "random_forest": RandomForestClassifier(n_estimators=300, class_weight="balanced", random_state=SEED, n_jobs=-1),
 }
+
+# ============================================================
+# 1. Baselines on the spatial split
+# ============================================================
+print("\n===== Baselines (spatial split) =====")
+rows, preds = [], {}
+for name, m in models.items():
+    m.fit(Xtr, ytr)
+    for split, X, y in (("val", Xva, yva), ("test", Xte, yte)):
+        if len(y) == 0:
+            continue
+        r, p = evaluate(m, X, y)
+        rows.append({"model": name, "split": split, "n": len(y), **{k: round(v, 4) for k, v in r.items()}})
+        preds[(name, split)] = p
+res = pd.DataFrame(rows)
+res.to_csv("data/metadata/baseline_results.csv", index=False)
+print(res.to_string(index=False))
