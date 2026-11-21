@@ -124,3 +124,29 @@ ax.set_ylim(0, 1); ax.set_ylabel("accuracy (random forest)"); ax.set_title("Why 
 for i, v in enumerate([rand_acc, spat_acc]):
     ax.text(i, v + 0.02, f"{v:.2f}", ha="center")
 plt.tight_layout(); plt.savefig("reports/figures/d23_leakage_demo.png", dpi=150); plt.close()
+# ============================================================
+# 4. Band importance + confusion matrix
+# ============================================================
+rf = models["random_forest"]
+imp = rf.feature_importances_
+bimp = imp[:n_bands]
+top = np.argsort(bimp)[::-1][:TOP_BANDS]
+print(f"\nTop {TOP_BANDS} important wavelengths (nm):", sorted(wl[top].round(0).astype(int).tolist()))
+if len(imp) > n_bands:
+    inames = meta.get("indices", [f"idx{i}" for i in range(len(imp) - n_bands)])
+    print("Index importances:", {n: round(float(v), 4) for n, v in zip(inames, imp[n_bands:])})
+pd.DataFrame({"wavelength_nm": wl[top], "importance": bimp[top]}).to_csv("data/metadata/top_bands.csv", index=False)
+
+fig, ax = plt.subplots(figsize=(10, 4))
+ax.plot(wl, bimp); ax.scatter(wl[top], bimp[top], c="red", s=18, zorder=3)
+ax.set_xlabel("Wavelength (nm)"); ax.set_ylabel("RF importance"); ax.set_title("Which spectral regions matter (red = top bands)")
+plt.tight_layout(); plt.savefig("reports/figures/d23_band_importance.png", dpi=150); plt.close()
+
+if len(yte):
+    cm = confusion_matrix(yte, preds[("random_forest", "test")], labels=list(range(n_classes))).astype(float)
+    cmn = cm / np.maximum(cm.sum(axis=1, keepdims=True), 1)
+    fig, ax = plt.subplots(figsize=(7, 6))
+    im = ax.imshow(cmn, cmap="Blues", vmin=0, vmax=1); plt.colorbar(im, label="row-normalized")
+    ax.set_xticks(range(n_classes)); ax.set_yticks(range(n_classes))
+    ax.set_xlabel("predicted"); ax.set_ylabel("true"); ax.set_title("Random forest: confusion matrix (test)")
+    plt.tight_layout(); plt.savefig("reports/figures/d23_confusion_matrix.png", dpi=150); plt.close()
