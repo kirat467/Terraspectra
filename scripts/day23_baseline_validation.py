@@ -4,3 +4,8 @@ from datetime import date
 
 os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 print("Working folder:", os.getcwd())
+# ===================== SETTINGS =====================
+SEED = 42
+N_BOOT = 300
+TOP_BANDS = 15
+# ====================================================
