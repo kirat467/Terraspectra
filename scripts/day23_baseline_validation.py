@@ -86,3 +86,13 @@ for name, m in models.items():
 res = pd.DataFrame(rows)
 res.to_csv("data/metadata/baseline_results.csv", index=False)
 print(res.to_string(index=False))
+# ============================================================
+# 2. Bootstrap CI (test accuracy, random forest)
+# ============================================================
+ci = None
+if len(yte) >= 10:
+    p = preds[("random_forest", "test")]
+    rng = np.random.default_rng(SEED)
+    accs = [accuracy_score(yte[i], p[i]) for i in (rng.integers(0, len(yte), len(yte)) for _ in range(N_BOOT))]
+    ci = (float(np.percentile(accs, 2.5)), float(np.percentile(accs, 97.5)))
+    print(f"\nRF test accuracy 95% bootstrap CI: {ci[0]:.3f} - {ci[1]:.3f} (n_test={len(yte)})")
