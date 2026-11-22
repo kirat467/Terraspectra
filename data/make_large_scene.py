@@ -98,13 +98,16 @@ def make_strip(r0, r1, size, step, crop, nir, centres, pond_list, seed):
     cube[fb] = 0.8 * soil_spectrum() + 0.2 * leaf_spectrum(0.0)
     cube = cube.reshape(h, size, N_BANDS)
     yy, xx = np.mgrid[r0:r1, 0:size]
+    water = np.zeros((h, size), dtype=bool)
     for cx, cy, rx, ry in pond_list:
-        cube[(((xx - cx) / rx) ** 2 + ((yy - cy) / ry) ** 2) < 1] = water_spectrum()
+        inside = (((xx - cx) / rx) ** 2 + ((yy - cy) / ry) ** 2) < 1
+        cube[inside] = water_spectrum()
+        water |= inside
     cube += noise
     label = np.zeros((h, size), dtype=np.int8)
     label[sev >= EARLY_STRESS] = 1
     label[sev >= VISIBLE_STRESS] = 2
-    label[~in_field | fallow] = -1
+    label[~in_field | fallow | water] = -1                       # open water is not a crop (a pond inside an outbreak is not "stress")
     return np.round(np.clip(cube, 0, 1) * SCALE).astype(np.uint16), label
 
 
@@ -112,12 +115,13 @@ def peak_memory_mb():
     return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024.0      # Linux reports KB
 
 
-def generate(out, size=1024, step=5, strip=16, seed=7):
+def generate(out, size=1024, step=5, strip=16, seed=7, farm=0):
     out = Path(out)
     out.mkdir(parents=True, exist_ok=True)
     t0 = time.time()
-    crop, nir = layout(size)
-    centres, pond_list = outbreak_centres(size), ponds(size)
+    crop, nir = layout(size, 11 + farm)                      # farm = 0, 1, 2 ... gives a different field layout, outbreaks and ponds
+    centres, pond_list = outbreak_centres(size, 5 + farm), ponds(size, 9 + farm)
+    seed = seed + 1000 * farm
     cube = np.lib.format.open_memmap(out / f"large_cube_{step}.npy", mode="w+", dtype=np.uint16, shape=(size, size, N_BANDS))
     labels = np.lib.format.open_memmap(out / f"large_labels_{step}.npy", mode="w+", dtype=np.int8, shape=(size, size))
     for r0 in range(0, size, strip):

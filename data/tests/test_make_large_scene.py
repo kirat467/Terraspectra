@@ -34,3 +34,14 @@ def test_labels_match_layout(tmp_path):
     crop, _ = ml.layout(128)
     assert (lab[crop < 0] == -1).all() and set(np.unique(lab)) <= {-1, 0, 1, 2}
     assert (lab == 2).any() and (lab == 0).any()
+
+
+def test_farm_number_changes_layout_and_ponds_are_not_crops(tmp_path):
+    a = ml.generate(tmp_path / "a", size=96, step=4, farm=0)
+    b = ml.generate(tmp_path / "b", size=96, step=4, farm=1)
+    la = np.load(tmp_path / "a" / "large_labels_4.npy"); lb = np.load(tmp_path / "b" / "large_labels_4.npy")
+    assert not np.array_equal(la, lb)
+    cube = np.load(tmp_path / "a" / "large_cube_4.npy").astype(float) / 10000
+    nir, red = cube[:, :, 130], cube[:, :, 55]                                  # roughly 820 nm and 670 nm
+    water = (nir < 0.1) & (red < 0.1)
+    assert water.any() and (la[water] == -1).all()                              # open water is labelled "not a crop"
