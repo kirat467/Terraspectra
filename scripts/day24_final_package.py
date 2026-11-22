@@ -309,3 +309,27 @@ doc.add_paragraph("A documented, scripted and leakage-aware data preparation pip
 rp = "reports/TerraSpectra_Project_Report.docx"
 doc.save(rp)
 print("Saved", rp)
+# ============================================================
+# 3. SUBMISSION CHECKLIST
+# ============================================================
+tags = subprocess.run(["git", "tag"], capture_output=True, text=True).stdout.split()
+items = [
+    ("Source code", bool(glob.glob("src/*.py")) and bool(glob.glob("scripts/*.py")), "src/ + scripts/"),
+    ("Project documentation", os.path.exists("docs/data_dictionary.md") and os.path.exists("docs/dataset_card.md"), "docs/data_dictionary.md, dataset_card.md"),
+    ("Project report", os.path.exists(rp), rp),
+    ("Presentation (PPT)", os.path.exists("reports/TerraSpectra_DataPrep_Section.pptx"), "reports/TerraSpectra_DataPrep_Section.pptx (Day 20)"),
+    ("Model evaluation results", os.path.exists("docs/baseline_results.md"), "docs/baseline_results.md (Day 23)"),
+    ("Final project demonstration", os.path.exists("scripts/demo_app.py"), "streamlit run scripts/demo_app.py"),
+    ("Dataset handover package", os.path.exists("outputs/TerraSpectra_Dataset_Handover.zip"), "outputs/TerraSpectra_Dataset_Handover.zip"),
+    ("Final dataset (HDF5)", os.path.exists("data/processed/terraspectra_dataset.h5"), "data/processed/terraspectra_dataset.h5"),
+    ("Git tag v1.0-dataset", "v1.0-dataset" in tags, "git tag"),
+    ("Real scene + real disease labels", os.path.exists("data/labels/field_points.csv") and not is_test,
+     "PENDING: confirm label source with mentor" if is_test else "data/labels/field_points.csv"),
+]
+with open("docs/submission_checklist.md", "w", encoding="utf-8") as f:
+    f.write(f"# Submission checklist ({date.today()})\n\n")
+    for n, ok, where in items:
+        f.write(f"- [{'x' if ok else ' '}] {n}: {where}\n")
+print("\n===== SUBMISSION CHECKLIST =====")
+for n, ok, where in items:
+    print(f"[{'OK' if ok else '--'}] {n}: {where}")
