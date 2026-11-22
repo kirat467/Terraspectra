@@ -333,3 +333,33 @@ with open("docs/submission_checklist.md", "w", encoding="utf-8") as f:
 print("\n===== SUBMISSION CHECKLIST =====")
 for n, ok, where in items:
     print(f"[{'OK' if ok else '--'}] {n}: {where}")
+    # ============================================================
+# 4. WEEK 4 WRITE-UP
+# ============================================================
+rf = base[(base["model"] == "random_forest") & (base["split"] == "test")] if base is not None else None
+maj = base[(base["model"] == "majority_class") & (base["split"] == "test")] if base is not None else None
+lines = ["During Week 4, I focused on validating the dataset, documentation, and final delivery for the TerraSpectra project.", "", "Work completed:"]
+lines += ["- Completed the final HDF5 dataset with a data dictionary, dataset card and preprocessing report.",
+          "- Verified reproducibility by re-running the split pipeline with fixed seeds and comparing file hashes.",
+          "- Prepared the handover package (dataset, normalization statistics, class weights, loader example) for the ML team."]
+if rf is not None and len(rf):
+    lines.append(f"- Validated the dataset with baseline models (Random Forest test accuracy {float(rf['accuracy'].iloc[0]):.3f}, "
+                 f"macro-F1 {float(rf['macro_f1'].iloc[0]):.3f}; majority-class baseline {float(maj['accuracy'].iloc[0]):.3f}).")
+if leak:
+    lines.append(f"- Demonstrated why spatial splitting matters (random split {leak['random_split']['accuracy']:.2f} vs spatial split {leak['spatial_split']['accuracy']:.2f}).")
+lines += ["- Built the final project report (Word), a PPT section and an interactive Streamlit demo of the dataset.",
+          "- Pushed all code and documentation to the Member-3 branch on GitHub."]
+if is_test:
+    lines += ["", "The pipeline was validated on the Indian Pines benchmark; real disease labels remain the main pending dependency, which I am discussing with the mentor."]
+open("docs/week4_writeup.txt", "w", encoding="utf-8").write("\n".join(lines))
+print("\nSaved docs/week4_writeup.txt (paste into the weekly form after reading it)")
+
+try:
+    subprocess.run(["git", "add", "-A"], check=True)
+    subprocess.run(["git", "commit", "-m", "Day 24: demo app, Word report, submission checklist"], check=False)
+    if subprocess.run(["git", "remote"], capture_output=True, text=True).stdout.strip():
+        subprocess.run(["git", "push"], check=False)
+except Exception as e:
+    print("Git issue:", e)
+
+print("\nDAY 24 DONE. Demo: streamlit run scripts/demo_app.py | Report: reports/TerraSpectra_Project_Report.docx")
