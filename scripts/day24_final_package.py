@@ -171,3 +171,141 @@ with tabs[4]:
 '''
 open("scripts/demo_app.py", "w", encoding="utf-8").write(APP)
 print("Saved scripts/demo_app.py  ->  run:  streamlit run scripts/demo_app.py")
+# ============================================================
+# 2. WORD PROJECT REPORT
+# ============================================================
+scene = jl("data/metadata/scene_metadata.json")
+quality = jl("data/metadata/quality_report.json")
+smooth = jl("data/metadata/smoothing_choice.json")
+dsm = jl("data/metadata/dataset_metadata.json")
+cw = jl("data/processed/class_weights.json")
+leak = jl("data/metadata/leakage_demo.json")
+base = cs("data/metadata/baseline_results.csv")
+fisher = cs("data/metadata/indices_fisher_scores.csv")
+dist = cs("data/metadata/class_distribution_patches.csv")
+lstats = cs("data/metadata/label_stats.csv")
+top_b = cs("data/metadata/top_bands.csv")
+dataset_name = scene.get("dataset", "unknown")
+is_test = "Indian" in dataset_name
+n_p = dsm.get("n_patches", {})
+idx_names = dsm.get("indices", [])
+
+doc = Document()
+doc.styles["Normal"].font.name = "Calibri"
+doc.styles["Normal"].font.size = Pt(11)
+
+
+def table(df, max_rows=25):
+    if df is None or len(df) == 0:
+        return
+    df = df.head(max_rows)
+    t = doc.add_table(rows=1, cols=len(df.columns))
+    try:
+        t.style = "Light Grid Accent 1"
+    except Exception:
+        t.style = "Table Grid"
+    for i, c in enumerate(df.columns):
+        t.rows[0].cells[i].text = str(c)
+    for _, r in df.iterrows():
+        cells = t.add_row().cells
+        for i, v in enumerate(r.values):
+            cells[i].text = f"{v:.4g}" if isinstance(v, float) else str(v)
+    doc.add_paragraph()
+
+
+def fig(name, caption, width=6.0):
+    p = f"reports/figures/{name}.png"
+    if os.path.exists(p):
+        doc.add_picture(p, width=Inches(width))
+        c = doc.add_paragraph(caption)
+        c.runs[0].italic = True
+
+
+def bullets(items):
+    for x in items:
+        doc.add_paragraph(str(x), style="List Bullet")
+
+
+doc.add_heading("TerraSpectra: Hyperspectral Crop Disease Forecasting", 0)
+doc.add_paragraph(f"Project Report: Data Collection & Preparation\n{AUTHOR} | Data Associate L1 Intern | Infotact Solutions\n"
+                  f"Ref: {REF_NO} | Date: {date.today()}")
+
+doc.add_heading("1. Objective", 1)
+doc.add_paragraph("Build a clean, reproducible and leakage-free hyperspectral dataset (patches, labels, vegetation indices and weather "
+                  "features) that the modeling team can use for crop disease detection and forecasting.")
+
+doc.add_heading("2. Data", 1)
+bullets([f"Dataset used: {dataset_name}",
+         f"Scene shape (bands, H, W): {scene.get('shape_BHW')}",
+         f"Wavelength range: {scene.get('wavelength_min_nm')} - {scene.get('wavelength_max_nm')} nm",
+         "Weather: NASA POWER daily data (temperature, humidity, rainfall, radiation)"])
+if is_test:
+    doc.add_paragraph("Note: the pipeline was developed and validated on the Indian Pines benchmark (crop-type classes, not disease labels) "
+                      "while real disease labels were being arranged. All steps are config-driven and can be re-run on the real scene.")
+
+doc.add_heading("3. Cleaning and quality", 1)
+table(pd.DataFrame({"item": list(quality.keys()), "value": list(quality.values())}))
+doc.add_paragraph("Steps: reflectance scaling, water-absorption band removal, noisy-band detection, cloud/shadow masking, spectral gap filling, clipping to [0, 1].")
+fig("d7_bad_band_removal", "Figure 1: Band removal")
+fig("d8_spectra_check", "Figure 2: Spectra after cleaning")
+
+doc.add_heading("4. Reprojection and label alignment", 1)
+doc.add_paragraph("Imagery was resampled bilinearly and labels with nearest-neighbour so class values are never interpolated. Alignment was verified by overlay.")
+fig("d9_alignment_check", "Figure 3: Label alignment check")
+if lstats is not None:
+    table(lstats)
+
+doc.add_heading("5. Smoothing, normalization and features", 1)
+bullets([f"Savitzky-Golay smoothing: window {smooth.get('savgol_window')}, polynomial order {smooth.get('savgol_polyorder')}",
+         "Normalization: per-band z-score using training-patch statistics only (prevents leakage)",
+         f"Vegetation indices: {idx_names}",
+         "Weather risk features: rolling temperature, humidity, rainfall, favourable-day counts (generic fungal-risk proxy)"])
+fig("d12_smoothing", "Figure 4: Spectral smoothing")
+fig("d13_index_maps", "Figure 5: Vegetation index maps")
+table(fisher)
+
+doc.add_heading("6. Dataset preparation", 1)
+bullets([f"Patch size {dsm.get('patch_size')}x{dsm.get('patch_size')}, non-overlapping",
+         f"Spatial block split (block {dsm.get('block_size_patches')}x{dsm.get('block_size_patches')} patches, seed {dsm.get('split_seed')}); random pixel split avoided",
+         f"Patches: train {n_p.get('train')}, validation {n_p.get('val')}, test {n_p.get('test')}",
+         f"Classes: {len(dsm.get('classes', {}))}; training imbalance ratio {cw.get('imbalance_ratio_train', 'NA')}",
+         "Imbalance handling: balanced class weights and an oversampling index (no data duplicated on disk)"])
+fig("d17_spatial_split", "Figure 6: Spatial split map")
+fig("d18_class_distribution_splits", "Figure 7: Class distribution per split")
+table(dist)
+
+doc.add_heading("7. Dataset validation with baseline models", 1)
+doc.add_paragraph("Simple baselines were trained only to confirm the dataset carries learnable signal; they are not the project's final model.")
+table(base)
+if leak:
+    doc.add_paragraph(f"Leakage check: random-split accuracy {leak['random_split']['accuracy']:.3f} vs spatial-split accuracy "
+                      f"{leak['spatial_split']['accuracy']:.3f}.")
+fig("d23_leakage_demo", "Figure 8: Random vs spatial split")
+fig("d23_band_importance", "Figure 9: Important spectral regions")
+if top_b is not None:
+    table(top_b)
+
+doc.add_heading("8. Limitations and risks", 1)
+lim = []
+if is_test:
+    lim.append("Results are on a benchmark dataset; disease labels for a real scene are the main pending dependency.")
+lim += ["Cloud/shadow masking is heuristic unless the official sensor mask is used.",
+        "Weather thresholds are a generic proxy and need disease-specific values from a domain expert.",
+        "Small test sets give wide confidence intervals; scores should be reported with n_test."]
+if cw.get("rare_classes_lt5_train"):
+    lim.append(f"Classes with fewer than 5 training patches: {cw['rare_classes_lt5_train']}.")
+bullets(lim)
+
+doc.add_heading("9. Reproduction and handover", 1)
+bullets(["pip install -r requirements.txt",
+         "Run scripts/day4_5_6_all.py through scripts/day19_20_all.py in order (fixed seeds)",
+         "Dataset: data/processed/terraspectra_dataset.h5 | Loader: handover/load_example.py",
+         "Documentation: data_dictionary.md, dataset_card.md, preprocessing_report.md",
+         "Demo: streamlit run scripts/demo_app.py"])
+
+doc.add_heading("10. Conclusion", 1)
+doc.add_paragraph("A documented, scripted and leakage-aware data preparation pipeline is in place. The dataset is ready for the modeling "
+                  "team, and the same scripts can process a real hyperspectral scene once disease labels are available.")
+rp = "reports/TerraSpectra_Project_Report.docx"
+doc.save(rp)
+print("Saved", rp)
