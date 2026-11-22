@@ -1,0 +1,336 @@
+{
+  "evaluation": "3 new simulated farms, 192 x 192 pixels, 6 weekly scans each",
+  "fpr_per_scan": 0.01,
+  "per_farm": [
+    {
+      "ground_truth": {
+        "pixels": 3898,
+        "median_lead_days": 14.0,
+        "mean_lead_days": 14.283735248845561
+      },
+      "methods": {
+        "NDVI": {
+          "threshold": -0.8088266849517822,
+          "pixels_reaching_visible": 3898,
+          "never_flagged": 0.0,
+          "false_alarm_ever": 0.05733333333333333,
+          "flagged_on_first_scan": 0.006670087224217547,
+          "median_lead_days": 14.0,
+          "mean_lead_days": 13.132632119035403,
+          "shares": {
+            "21+ days before": 0.09902514109799897,
+            "14 days before": 0.6631605951770139,
+            "7 days before": 0.23781426372498718,
+            "same scan": 0.0,
+            "after visible": 0.0,
+            "never flagged": 0.0
+          }
+        },
+        "red edge position": {
+          "threshold": -717.5638172745556,
+          "pixels_reaching_visible": 3898,
+          "never_flagged": 0.0,
+          "false_alarm_ever": 0.06,
+          "flagged_on_first_scan": 0.0007696254489481786,
+          "median_lead_days": 14.0,
+          "mean_lead_days": 15.39712673165726,
+          "shares": {
+            "21+ days before": 0.20754232939969214,
+            "14 days before": 0.78450487429451,
+            "7 days before": 0.007952796305797845,
+            "same scan": 0.0,
+            "after visible": 0.0,
+            "never flagged": 0.0
+          }
+        },
+        "NDII (leaf water)": {
+          "threshold": -0.21386690437793732,
+          "pixels_reaching_visible": 3898,
+          "never_flagged": 0.0,
+          "false_alarm_ever": 0.06006060606060606,
+          "flagged_on_first_scan": 0.0035915854284248334,
+          "median_lead_days": 14.0,
+          "mean_lead_days": 15.443817342226783,
+          "shares": {
+            "21+ days before": 0.21754746023601848,
+            "14 days before": 0.7711646998460749,
+            "7 days before": 0.011287839917906618,
+            "same scan": 0.0,
+            "after visible": 0.0,
+            "never flagged": 0.0
+          }
+        },
+        "3D-CNN": {
+          "threshold": 0.2556099733747976,
+          "pixels_reaching_visible": 3898,
+          "never_flagged": 0.0,
+          "false_alarm_ever": 0.06,
+          "flagged_on_first_scan": 0.0,
+          "median_lead_days": 14.0,
+          "mean_lead_days": 15.785017957927142,
+          "shares": {
+            "21+ days before": 0.25808106721395585,
+            "14 days before": 0.7388404309902514,
+            "7 days before": 0.0030785017957927143,
+            "same scan": 0.0,
+            "after visible": 0.0,
+            "never flagged": 0.0
+          }
+        }
+      }
+    },
+    {
+      "ground_truth": {
+        "pixels": 2249,
+        "median_lead_days": 14.0,
+        "mean_lead_days": 14.3983992885727
+      },
+      "methods": {
+        "NDVI": {
+          "threshold": -0.8053719401359558,
+          "pixels_reaching_visible": 2249,
+          "never_flagged": 0.0,
+          "false_alarm_ever": 0.056362784157487696,
+          "flagged_on_first_scan": 0.004446420631391729,
+          "median_lead_days": 14.0,
+          "mean_lead_days": 12.755002223210315,
+          "shares": {
+            "21+ days before": 0.07603379279679857,
+            "14 days before": 0.6602934637616719,
+            "7 days before": 0.2636727434415296,
+            "same scan": 0.0,
+            "after visible": 0.0,
+            "never flagged": 0.0
+          }
+        },
+        "red edge position": {
+          "threshold": -717.5772305543209,
+          "pixels_reaching_visible": 2249,
+          "never_flagged": 0.0,
+          "false_alarm_ever": 0.06011249121162409,
+          "flagged_on_first_scan": 0.017785682525566917,
+          "median_lead_days": 14.0,
+          "mean_lead_days": 15.503334815473544,
+          "shares": {
+            "21+ days before": 0.21476211649622054,
+            "14 days before": 0.7852378835037794,
+            "7 days before": 0.0,
+            "same scan": 0.0,
+            "after visible": 0.0,
+            "never flagged": 0.0
+          }
+        },
+        "NDII (leaf water)": {
+          "threshold": -0.21357573568820953,
+          "pixels_reaching_visible": 2249,
+          "never_flagged": 0.0,
+          "false_alarm_ever": 0.06011249121162409,
+          "flagged_on_first_scan": 0.023566029346376166,
+          "median_lead_days": 14.0,
+          "mean_lead_days": 15.353935082258781,
+          "shares": {
+            "21+ days before": 0.19341929746554024,
+            "14 days before": 0.8065807025344598,
+            "7 days before": 0.0,
+            "same scan": 0.0,
+            "after visible": 0.0,
+            "never flagged": 0.0
+          }
+        },
+        "3D-CNN": {
+          "threshold": 0.18970532786101144,
+          "pixels_reaching_visible": 2249,
+          "never_flagged": 0.0,
+          "false_alarm_ever": 0.06011249121162409,
+          "flagged_on_first_scan": 0.0,
+          "median_lead_days": 14.0,
+          "mean_lead_days": 16.122721209426413,
+          "shares": {
+            "21+ days before": 0.303245887060916,
+            "14 days before": 0.6967541129390841,
+            "7 days before": 0.0,
+            "same scan": 0.0,
+            "after visible": 0.0,
+            "never flagged": 0.0
+          }
+        }
+      }
+    },
+    {
+      "ground_truth": {
+        "pixels": 3598,
+        "median_lead_days": 14.0,
+        "mean_lead_days": 15.377431906614786
+      },
+      "methods": {
+        "NDVI": {
+          "threshold": -0.8197914958000183,
+          "pixels_reaching_visible": 3598,
+          "never_flagged": 0.0,
+          "false_alarm_ever": 0.05966968566862014,
+          "flagged_on_first_scan": 0.0016675931072818232,
+          "median_lead_days": 14.0,
+          "mean_lead_days": 13.678988326848248,
+          "shares": {
+            "21+ days before": 0.17787659811006115,
+            "14 days before": 0.5844913841022791,
+            "7 days before": 0.2376320177876598,
+            "same scan": 0.0,
+            "after visible": 0.0,
+            "never flagged": 0.0
+          }
+        },
+        "red edge position": {
+          "threshold": -717.2434320724523,
+          "pixels_reaching_visible": 3598,
+          "never_flagged": 0.0,
+          "false_alarm_ever": 0.06020245071923282,
+          "flagged_on_first_scan": 0.0022234574763757642,
+          "median_lead_days": 14.0,
+          "mean_lead_days": 15.640077821011673,
+          "shares": {
+            "21+ days before": 0.2876598110061145,
+            "14 days before": 0.6484157865480823,
+            "7 days before": 0.06392440244580322,
+            "same scan": 0.0,
+            "after visible": 0.0,
+            "never flagged": 0.0
+          }
+        },
+        "NDII (leaf water)": {
+          "threshold": -0.21162723004817963,
+          "pixels_reaching_visible": 3598,
+          "never_flagged": 0.0,
+          "false_alarm_ever": 0.06020245071923282,
+          "flagged_on_first_scan": 0.0,
+          "median_lead_days": 14.0,
+          "mean_lead_days": 15.330739299610896,
+          "shares": {
+            "21+ days before": 0.25903279599777657,
+            "14 days before": 0.6542523624235687,
+            "7 days before": 0.0867148415786548,
+            "same scan": 0.0,
+            "after visible": 0.0,
+            "never flagged": 0.0
+          }
+        },
+        "3D-CNN": {
+          "threshold": 0.4070098007073159,
+          "pixels_reaching_visible": 3598,
+          "never_flagged": 0.0,
+          "false_alarm_ever": 0.06020245071923282,
+          "flagged_on_first_scan": 0.0,
+          "median_lead_days": 14.0,
+          "mean_lead_days": 15.67704280155642,
+          "shares": {
+            "21+ days before": 0.28599221789883267,
+            "14 days before": 0.6586992773763202,
+            "7 days before": 0.055308504724847135,
+            "same scan": 0.0,
+            "after visible": 0.0,
+            "never flagged": 0.0
+          }
+        }
+      }
+    }
+  ],
+  "methods": {
+    "NDVI": {
+      "shares": {
+        "21+ days before": 0.1228322216521293,
+        "14 days before": 0.6334530528476141,
+        "7 days before": 0.24371472550025655,
+        "same scan": 0.0,
+        "after visible": 0.0,
+        "never flagged": 0.0
+      },
+      "pixels_reaching_visible": 9745,
+      "median_lead_days_per_farm": [
+        14.0,
+        14.0,
+        14.0
+      ],
+      "flagged_on_first_scan": 0.0043099025141098,
+      "false_alarm_ever": 0.05778860105314706,
+      "share_at_least_14_days_per_farm": [
+        0.762,
+        0.736,
+        0.762
+      ]
+    },
+    "red edge position": {
+      "shares": {
+        "21+ days before": 0.2387891226269882,
+        "14 days before": 0.7344279117496152,
+        "7 days before": 0.026782965623396614,
+        "same scan": 0.0,
+        "after visible": 0.0,
+        "never flagged": 0.0
+      },
+      "pixels_reaching_visible": 9745,
+      "median_lead_days_per_farm": [
+        14.0,
+        14.0,
+        14.0
+      ],
+      "flagged_on_first_scan": 0.005233453052847613,
+      "false_alarm_ever": 0.060104980643618966,
+      "share_at_least_14_days_per_farm": [
+        0.992,
+        1.0,
+        0.936
+      ]
+    },
+    "NDII (leaf water)": {
+      "shares": {
+        "21+ days before": 0.22729604925602873,
+        "14 days before": 0.7361723961005644,
+        "7 days before": 0.03653155464340688,
+        "same scan": 0.0,
+        "after visible": 0.0,
+        "never flagged": 0.0
+      },
+      "pixels_reaching_visible": 9745,
+      "median_lead_days_per_farm": [
+        14.0,
+        14.0,
+        14.0
+      ],
+      "flagged_on_first_scan": 0.006875320677270395,
+      "false_alarm_ever": 0.06012518266382099,
+      "share_at_least_14_days_per_farm": [
+        0.989,
+        1.0,
+        0.913
+      ]
+    },
+    "3D-CNN": {
+      "shares": {
+        "21+ days before": 0.27880964597229346,
+        "14 days before": 0.6995382247306311,
+        "7 days before": 0.021652129297075422,
+        "same scan": 0.0,
+        "after visible": 0.0,
+        "never flagged": 0.0
+      },
+      "pixels_reaching_visible": 9745,
+      "median_lead_days_per_farm": [
+        14.0,
+        14.0,
+        14.0
+      ],
+      "flagged_on_first_scan": 0.0,
+      "false_alarm_ever": 0.060104980643618966,
+      "share_at_least_14_days_per_farm": [
+        0.997,
+        1.0,
+        0.945
+      ]
+    }
+  },
+  "ground_truth_median_lead_days_per_farm": [
+    14.0,
+    14.0,
+    14.0
+  ]
+}
