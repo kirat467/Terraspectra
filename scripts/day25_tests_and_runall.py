@@ -171,3 +171,74 @@ def test_final_dataset_integrity():
 open("tests/test_pipeline.py", "w", encoding="utf-8").write(TESTS.lstrip("\n"))
 open("tests/__init__.py", "w").write("")
 print("Saved tests/test_pipeline.py")
+# ============================================================
+# 2. run_all.py
+# ============================================================
+RUN_ALL = r'''
+"""Run the whole pipeline in order, with timing and a log.
+Usage:
+  python scripts/run_all.py                  # processing steps only (no downloads/logins)
+  python scripts/run_all.py --with-network   # also the search/download steps
+  python scripts/run_all.py --start 5        # begin from step 5
+  python scripts/run_all.py --list           # show the steps
+"""
+import argparse, os, subprocess, sys, time
+from datetime import datetime
+
+os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+STEPS = [
+    ("scripts/day2_day3_all.py", True, "sources search + Indian Pines test data"),
+    ("scripts/day4_5_6_all.py", False, "inventory, metadata, EDA"),
+    ("scripts/day21_real_emit_scene.py", True, "real EMIT scene download + ortho crop"),
+    ("scripts/day7_8_9_all.py", False, "bad bands, masks, gap fill, reprojection"),
+    ("scripts/day10_11_12_all.py", False, "phase 1 summary, normalization, smoothing"),
+    ("scripts/day13_14_15_all.py", False, "indices, weather, label alignment"),
+    ("scripts/day16_17_18_all.py", False, "patches, spatial split, final dataset"),
+    ("scripts/day19_20_all.py", False, "documentation, handover, PPT"),
+    ("scripts/day23_baseline_validation.py", False, "baseline validation"),
+    ("scripts/day24_final_package.py", False, "report, demo, checklist"),
+]
+
+ap = argparse.ArgumentParser()
+ap.add_argument("--with-network", action="store_true")
+ap.add_argument("--start", type=int, default=1)
+ap.add_argument("--list", action="store_true")
+a = ap.parse_args()
+
+if a.list:
+    for i, (s, net, d) in enumerate(STEPS, 1):
+        print(f"{i:2d}. {s}  {'[network]' if net else ''}  {d}")
+    sys.exit(0)
+
+os.makedirs("logs", exist_ok=True)
+log = open("logs/run_all.log", "a", encoding="utf-8")
+
+
+def say(msg):
+    line = f"[{datetime.now():%Y-%m-%d %H:%M:%S}] {msg}"
+    print(line)
+    log.write(line + "\n")
+    log.flush()
+
+
+for i, (script, net, desc) in enumerate(STEPS, 1):
+    if i < a.start:
+        continue
+    if net and not a.with_network:
+        say(f"SKIP {i}. {script} (network step; use --with-network)")
+        continue
+    if not os.path.exists(script):
+        say(f"SKIP {i}. {script} (file missing)")
+        continue
+    say(f"START {i}. {script} - {desc}")
+    t0 = time.time()
+    rc = subprocess.run([sys.executable, script]).returncode
+    say(f"{'DONE ' if rc == 0 else 'FAIL '} {i}. {script} in {time.time() - t0:.0f}s (exit {rc})")
+    if rc != 0:
+        say("Stopped. Fix the error above and re-run with --start " + str(i))
+        sys.exit(rc)
+say("ALL STEPS FINISHED")
+'''
+open("scripts/run_all.py", "w", encoding="utf-8").write(RUN_ALL.lstrip("\n"))
+print("Saved scripts/run_all.py")
