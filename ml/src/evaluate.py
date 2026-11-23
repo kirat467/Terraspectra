@@ -26,6 +26,9 @@ def evaluate_model(model, dataloader, device=None):
     predicted = []
     confidences = []
 
+    top3_correct = 0
+    total_samples = 0
+
     num_classes = None
 
     with torch.no_grad():
@@ -35,6 +38,9 @@ def evaluate_model(model, dataloader, device=None):
             images = images.to(device)
             outputs = model(images)
 
+            if outputs.ndim != 2:
+                raise ValueError("Model output must be a 2D tensor")
+
             if num_classes is None:
                 num_classes = outputs.shape[1]
 
@@ -42,7 +48,21 @@ def evaluate_model(model, dataloader, device=None):
                 raise ValueError("Inconsistent number of model classes")
 
             probabilities = torch.softmax(outputs, dim=1)
+
             confidence, predictions = probabilities.max(dim=1)
+
+            top_k = min(3, num_classes)
+            top3_predictions = probabilities.topk(
+                top_k, dim=1
+            ).indices
+
+            labels_device = labels.to(device)
+
+            top3_correct += (
+                top3_predictions == labels_device.unsqueeze(1)
+            ).any(dim=1).sum().item()
+
+            total_samples += labels.size(0)
 
             actual.extend(labels.cpu().numpy().tolist())
             predicted.extend(predictions.cpu().numpy().tolist())
@@ -89,6 +109,8 @@ def evaluate_model(model, dataloader, device=None):
         zero_division=0
     )
 
+    top3_accuracy = top3_correct / total_samples
+
     report = classification_report(
         actual,
         predicted,
@@ -109,7 +131,6 @@ def evaluate_model(model, dataloader, device=None):
         for class_id in class_ids
     }
 
-    # Per-class performance
     per_class_metrics = {}
 
     for class_id, class_name in enumerate(class_names):
@@ -130,7 +151,6 @@ def evaluate_model(model, dataloader, device=None):
             "total_samples": total
         }
 
-    # Find most confused disease pairs
     confused_pairs = []
 
     for actual_id in class_ids:
@@ -153,6 +173,7 @@ def evaluate_model(model, dataloader, device=None):
 
     print("\n--- TerraSpectra Model Evaluation ---")
     print("Accuracy:", accuracy)
+    print("Top-3 Accuracy:", top3_accuracy)
     print("Precision:", precision)
     print("Recall:", recall)
     print("F1 Score:", f1)
@@ -188,6 +209,7 @@ def evaluate_model(model, dataloader, device=None):
 
     return {
         "accuracy": accuracy,
+        "top3_accuracy": top3_accuracy,
         "precision": precision,
         "recall": recall,
         "f1_score": f1,
