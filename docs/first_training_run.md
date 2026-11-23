@@ -11,11 +11,13 @@
 ## Results on the test blocks
 | Class | Test patches | Precision | Recall | F1 |
 |---|---|---|---|---|
-| Healthy | 1,016 | 0.986 | 0.999 | 0.993 |
-| Early stress | 71 | 0.655 | 0.803 | 0.722 |
-| Visible stress | 29 | 0.000 | 0.000 | 0.000 |
+| Healthy | 1,016 | 0.991 | 0.999 | 0.995 |
+| Early stress | 71 | 0.738 | 0.873 | 0.800 |
+| Visible stress | 29 | 1.000 | 0.276 | 0.432 |
 
-Overall accuracy is 96.1%, but accuracy hides the problem: all 29 visible-stress patches were called early stress.
+Overall accuracy is 97.2%, but accuracy hides the problem: only 8 of the 29 visible-stress patches were found, and the other 21 were called early stress (confusion matrix rows are the true class: healthy 1015/1/0, early 9/62/0, visible 0/21/8). Numbers come from `docs/cnn_run_results.json` and were re-checked by evaluating the saved model on the test patches (Nov 23).
+
+*Correction (Nov 23): an earlier version of this table showed accuracy 96.1% and zero visible-stress recall, which did not match the saved run.*
 
 How well each method separates stressed patches from healthy ones (AUC, same test patches, 1.0 is perfect):
 | Method | Early vs healthy | Visible vs healthy |
@@ -29,7 +31,7 @@ How well each method separates stressed patches from healthy ones (AUC, same tes
 So the CNN finds early stress far better than NDVI, but a simple linear model on all bands does just as well. On this simulated data the extra power of the CNN is not needed; real data will decide.
 
 ## Why visible stress failed
-Only 37 visible-stress patches exist in training and validation has none, so early stopping never saw the class and the model never learned to separate it from early stress. This is a data problem (6 simulated weeks, one main outbreak), not a model one. Fixes: simulate a longer season, or use more patch positions in the diseased blocks.
+Only 37 visible-stress patches exist in training and validation has none, so early stopping never saw the class and the model only partly learned to separate it from early stress. This is a data problem (6 simulated weeks, one main outbreak), not a model one. Fixes: simulate a longer season, or use more patch positions in the diseased blocks.
 
 ## CNN output in the dashboard
 `python scripts/cnn_to_dashboard.py --out frontend/public/data/risk_cnn` runs the trained model over the six scans and writes risk files the dashboard reads (`docs/screenshots/07_cnn_output.png`). At risk 0.6 on the last scan it covers 98% of the truly stressed pixels with 87% precision.
