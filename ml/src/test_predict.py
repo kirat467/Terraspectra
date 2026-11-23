@@ -23,6 +23,17 @@ class InvalidPredictionModel(torch.nn.Module):
         ).expand(images.shape[0], -1)
 
 
+class BatchPredictionModel(torch.nn.Module):
+
+    def forward(self, images):
+        values = images[:, 0]
+
+        return torch.stack(
+            [values, -values, torch.zeros_like(values)],
+            dim=1
+        )
+
+
 def test_predict_3dcnn():
 
     class_names = ["Healthy", "Leaf Rust", "Blight"]
@@ -88,3 +99,25 @@ def test_invalid_nan_outputs_are_rejected():
             images,
             ["Healthy", "Rust", "Blight"]
         )
+
+
+def test_batch_predictions_are_individual():
+
+    images = torch.tensor([[2.0], [0.5], [-2.0]])
+
+    class_names = ["Healthy", "Rust", "Blight"]
+
+    results = predict_crop(
+        BatchPredictionModel(),
+        images,
+        class_names
+    )
+
+    assert len(results) == 3
+    assert results[0]["prediction"] == "Healthy"
+    assert results[1]["prediction"] == "Healthy"
+    assert results[2]["prediction"] == "Rust"
+
+    for result in results:
+        assert result["prediction"] in class_names
+        assert len(result["top_predictions"]) == 3
