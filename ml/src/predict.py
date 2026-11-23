@@ -32,12 +32,32 @@ def predict_crop(
         if outputs.ndim != 2:
             raise ValueError("Model must return 2D class logits")
 
+        if outputs.shape[0] == 0:
+            raise ValueError("Prediction batch cannot be empty")
+
         if outputs.shape[1] != len(class_names):
             raise ValueError("Class names do not match model outputs")
 
+        if not torch.isfinite(outputs).all():
+            raise ValueError("Model outputs must contain finite values")
+
         probabilities = F.softmax(outputs, dim=1)
 
+        if not torch.isfinite(probabilities).all():
+            raise ValueError("Model probabilities must be finite")
+
+        if not torch.allclose(
+            probabilities.sum(dim=1),
+            torch.ones(
+                probabilities.shape[0],
+                device=device
+            ),
+            atol=1e-5
+        ):
+            raise ValueError("Invalid prediction probabilities")
+
         top_count = min(3, len(class_names))
+
         top_probs, top_indices = torch.topk(
             probabilities, top_count, dim=1
         )
