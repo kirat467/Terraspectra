@@ -284,3 +284,26 @@ manifest = {"created": str(date.today()),
                       if os.path.getsize(p) < 3_000_000_000}}
 json.dump(manifest, open("docs/data_manifest.json", "w"), indent=2)
 print(f"\nSaved docs/data_manifest.json ({len(manifest['files'])} files hashed)")
+# ============================================================
+# 6. README section
+# ============================================================
+marker = "## Testing and full re-run"
+rd = open("README.md", encoding="utf-8").read() if os.path.exists("README.md") else ""
+if marker not in rd:
+    with open("README.md", "a", encoding="utf-8") as f:
+        f.write(f"""
+
+{marker}
+```bash
+pip install -r requirements.txt
+pytest tests -q                              # unit tests (synthetic data, no downloads)
+python scripts/run_all.py --list             # show pipeline steps
+python scripts/run_all.py                    # processing steps only
+python scripts/run_all.py --with-network     # also search/download steps (needs Earthdata login)
+streamlit run scripts/demo_app.py            # interactive demo
+```
+- Test report: docs/test_report.txt | Lint report: docs/lint_report.txt
+- File hashes of final outputs: docs/data_manifest.json
+- All randomness uses fixed seeds (42); reproducibility check: docs/reproducibility_check.md
+""")
+    print("README.md updated")
