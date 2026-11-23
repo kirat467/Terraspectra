@@ -34,6 +34,12 @@ class BatchPredictionModel(torch.nn.Module):
         )
 
 
+class NeverCalledModel(torch.nn.Module):
+
+    def forward(self, images):
+        raise AssertionError("Model should not be called")
+
+
 def test_predict_3dcnn():
 
     class_names = ["Healthy", "Leaf Rust", "Blight"]
@@ -121,3 +127,18 @@ def test_batch_predictions_are_individual():
     for result in results:
         assert result["prediction"] in class_names
         assert len(result["top_predictions"]) == 3
+
+
+def test_empty_batch_is_rejected_before_inference():
+
+    images = torch.empty(0, 1)
+
+    with pytest.raises(
+        ValueError,
+        match="Prediction batch cannot be empty"
+    ):
+        predict_crop(
+            NeverCalledModel(),
+            images,
+            ["Healthy", "Rust", "Blight"]
+        )

@@ -15,6 +15,9 @@ def predict_crop(
     if image.ndim < 2:
         raise ValueError("Invalid image tensor")
 
+    if image.shape[0] == 0:
+        raise ValueError("Prediction batch cannot be empty")
+
     if not 0 <= confidence_threshold <= 100:
         raise ValueError("Invalid confidence threshold")
 
