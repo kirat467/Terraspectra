@@ -262,3 +262,25 @@ n_issues = len([l for l in lr.stdout.splitlines() if ".py:" in l])
 print("Lint errors:", n_issues, "(docs/lint_report.txt)")
 if n_issues:
     print("\n".join(lr.stdout.splitlines()[:10]))
+# ============================================================
+# 5. Data manifest (hashes of final files)
+# ============================================================
+
+
+def sha(path):
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for b in iter(lambda: f.read(1 << 20), b""):
+            h.update(b)
+    return h.hexdigest()
+
+
+files = []
+for pat in ("data/processed/*.h5", "data/processed/*.json", "data/processed/*.npz", "data/processed/*.npy",
+            "data/metadata/*.json", "data/metadata/*.csv", "outputs/*.zip"):
+    files += glob.glob(pat)
+manifest = {"created": str(date.today()),
+            "files": {p.replace("\\", "/"): {"bytes": os.path.getsize(p), "sha256": sha(p)} for p in sorted(set(files))
+                      if os.path.getsize(p) < 3_000_000_000}}
+json.dump(manifest, open("docs/data_manifest.json", "w"), indent=2)
+print(f"\nSaved docs/data_manifest.json ({len(manifest['files'])} files hashed)")
