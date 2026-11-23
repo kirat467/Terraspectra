@@ -307,3 +307,19 @@ streamlit run scripts/demo_app.py            # interactive demo
 - All randomness uses fixed seeds (42); reproducibility check: docs/reproducibility_check.md
 """)
     print("README.md updated")
+    # ============================================================
+# 7. Git
+# ============================================================
+try:
+    subprocess.run(["git", "add", "-A"], check=True)
+    subprocess.run(["git", "commit", "-m", "Day 25: unit tests, run_all, lint, data manifest"], check=False)
+    if tests_ok:
+        subprocess.run(["git", "tag", "-f", "v1.1-final"], check=True)
+    if subprocess.run(["git", "remote"], capture_output=True, text=True).stdout.strip():
+        subprocess.run(["git", "push"], check=False)
+        if tests_ok:
+            subprocess.run(["git", "push", "-f", "origin", "v1.1-final"], check=False)
+except Exception as e:
+    print("Git issue:", e)
+
+print("\nDAY 25 DONE." + (" Tag v1.1-final created." if tests_ok else " Tag NOT created because tests failed."))
