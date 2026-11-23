@@ -242,3 +242,12 @@ say("ALL STEPS FINISHED")
 '''
 open("scripts/run_all.py", "w", encoding="utf-8").write(RUN_ALL.lstrip("\n"))
 print("Saved scripts/run_all.py")
+# ============================================================
+# 3. Run tests
+# ============================================================
+print("\n===== Running tests =====")
+r = subprocess.run([sys.executable, "-m", "pytest", "tests", "-q", "--tb=short", "-rs"], capture_output=True, text=True)
+open("docs/test_report.txt", "w", encoding="utf-8").write(r.stdout + "\n" + r.stderr)
+print("\n".join(r.stdout.strip().splitlines()[-25:]))
+tests_ok = r.returncode == 0
+print("TESTS:", "ALL PASSED" if tests_ok else "SOME FAILED (see docs/test_report.txt, send me the failure text)")
