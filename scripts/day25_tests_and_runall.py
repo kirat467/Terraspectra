@@ -251,3 +251,14 @@ open("docs/test_report.txt", "w", encoding="utf-8").write(r.stdout + "\n" + r.st
 print("\n".join(r.stdout.strip().splitlines()[-25:]))
 tests_ok = r.returncode == 0
 print("TESTS:", "ALL PASSED" if tests_ok else "SOME FAILED (see docs/test_report.txt, send me the failure text)")
+# ============================================================
+# 4. Lint (only real errors: syntax, undefined names, bad comparisons)
+# ============================================================
+print("\n===== Lint (errors only) =====")
+lr = subprocess.run([sys.executable, "-m", "ruff", "check", "src", "scripts", "tests",
+                     "--select", "E9,F63,F7,F82", "--output-format", "concise"], capture_output=True, text=True)
+open("docs/lint_report.txt", "w", encoding="utf-8").write(lr.stdout + lr.stderr)
+n_issues = len([l for l in lr.stdout.splitlines() if ".py:" in l])
+print("Lint errors:", n_issues, "(docs/lint_report.txt)")
+if n_issues:
+    print("\n".join(lr.stdout.splitlines()[:10]))
