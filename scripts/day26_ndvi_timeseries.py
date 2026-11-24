@@ -192,3 +192,50 @@ if wf is not None:
     cor = trn[wcols + ["ndvi", "ndvi_delta"]].corrwith(trn["target_delta"], method="spearman").sort_values()
     print("\nSpearman correlation with next-NDVI change (train):\n", cor.round(3).to_string())
     cor.to_csv("data/metadata/forecast_feature_correlation.csv", header=["spearman_with_target_delta"])
+    # ============================================================
+# 5. Figures + summary
+# ============================================================
+piv = obs.pivot_table(index="date", columns="cell", values="ndvi")
+fig, ax = plt.subplots(figsize=(11, 4.8))
+for c in piv.columns:
+    ax.plot(piv.index, piv[c], color="tab:green", alpha=0.25, lw=1)
+ax.plot(piv.index, piv.mean(axis=1), color="darkgreen", lw=2.5, label="mean of cells")
+ax.set_ylabel("NDVI"); ax.set_title("Sentinel-2 NDVI time series per grid cell (clear pixels only)")
+if weather is not None:
+    ax2 = ax.twinx()
+    wsub = weather[(weather.index >= pd.Timestamp(DATE_START)) & (weather.index <= pd.Timestamp(DATE_END))]
+    ax2.bar(wsub.index, wsub["rain_mm"], color="tab:blue", alpha=0.35, width=1.0)
+    ax2.set_ylabel("Rain (mm/day)")
+ax.legend(loc="upper left")
+plt.tight_layout(); plt.savefig("reports/figures/d26_ndvi_timeseries.png", dpi=150); plt.close()
+
+fig, ax = plt.subplots(figsize=(11, 5))
+im = ax.imshow(piv.T.values, aspect="auto", cmap="RdYlGn", vmin=0, vmax=0.9)
+ax.set_yticks(range(len(piv.columns))); ax.set_yticklabels(piv.columns, fontsize=6)
+ax.set_xticks(range(0, len(piv.index), max(1, len(piv.index) // 10)))
+ax.set_xticklabels([d.strftime("%d %b") for d in piv.index[::max(1, len(piv.index) // 10)]], rotation=45, fontsize=7)
+ax.set_ylabel("cell"); ax.set_title("NDVI by cell and date (white = cloud / no data)"); plt.colorbar(im, label="NDVI")
+plt.tight_layout(); plt.savefig("reports/figures/d26_ndvi_heatmap.png", dpi=150); plt.close()
+
+summary = {"aoi_lonlat": aoi, "date_range": [DATE_START, DATE_END], "scenes_used": len(used_dates),
+           "observations": int(len(obs)), "table_rows": int(len(tab)),
+           "split_counts": tab["split"].value_counts().to_dict(), "drop_threshold": DROP_THRESH,
+           "target_note": "target_delta/target_drop are NDVI-change proxies, NOT disease labels"}
+json.dump(summary, open("data/metadata/timeseries_summary.json", "w"), indent=2, default=str)
+with open("docs/day26_summary.md", "w", encoding="utf-8") as f:
+    f.write(f"# Day 26: NDVI time series + forecasting table ({date.today()})\n\n")
+    f.write(f"- Source: Sentinel-2 L2A (Planetary Computer), {len(used_dates)} dates, {GRID}x{GRID} grid over {AOI_KM} km AOI\n")
+    f.write("- Weather: NASA POWER, backward-looking rolling features only (no future information)\n")
+    f.write("- Split: temporal (train earliest dates, test latest dates)\n")
+    f.write("- Targets: next-observation NDVI change / drop (>0.10). These are stress PROXIES, not confirmed disease labels.\n")
+    f.write("- Files: data/processed/forecasting_table.csv, ndvi_timeseries_long.csv, data/metadata/weather_daily_timeseries.csv\n")
+
+try:
+    subprocess.run(["git", "add", "-A"], check=True)
+    subprocess.run(["git", "commit", "-m", "Day 26: Sentinel-2 NDVI time series and forecasting table"], check=False)
+    if subprocess.run(["git", "remote"], capture_output=True, text=True).stdout.strip():
+        subprocess.run(["git", "push"], check=False)
+except Exception as e:
+    print("Git issue:", e)
+
+print("\nDAY 26 DONE. Figures: d26_ndvi_timeseries.png, d26_ndvi_heatmap.png | Table: data/processed/forecasting_table.csv")
