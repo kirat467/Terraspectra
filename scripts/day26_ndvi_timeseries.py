@@ -34,3 +34,13 @@ import matplotlib.pyplot as plt
 
 for d in ("data/processed", "data/metadata", "reports/figures", "docs"):
     os.makedirs(d, exist_ok=True)
+# ---------- AOI ----------
+lat0, lon0 = CENTER_LAT, CENTER_LON
+if os.path.exists("data/interim/real_scene_meta.json"):
+    bb = json.load(open("data/interim/real_scene_meta.json"))["bbox_lonlat"]
+    lon0, lat0 = (bb[0] + bb[2]) / 2, (bb[1] + bb[3]) / 2
+    print(f"AOI centre taken from real EMIT scene: {lat0:.4f}, {lon0:.4f}")
+dlat = (AOI_KM / 2) / 111.0
+dlon = (AOI_KM / 2) / (111.0 * np.cos(np.radians(lat0)))
+aoi = [lon0 - dlon, lat0 - dlat, lon0 + dlon, lat0 + dlat]
+print("AOI (lon/lat):", [round(v, 4) for v in aoi], "|", DATE_START, "->", DATE_END)
