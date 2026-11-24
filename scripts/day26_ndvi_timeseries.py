@@ -16,3 +16,21 @@ MIN_VALID_FRAC = 0.30          # a cell needs this fraction of clear pixels on a
 DROP_THRESH = 0.10             # next-obs NDVI drop bigger than this = "stress proxy"
 CENTER_LAT, CENTER_LON = 25.75, 85.0    # used if no real scene metadata exists
 # ==================================================================
+assert PIX % GRID == 0, "PIX must be divisible by GRID"
+subprocess.run([sys.executable, "-m", "pip", "install", "-q", "pystac-client", "planetary-computer",
+                "rasterio", "pandas", "matplotlib", "scipy"])
+
+import numpy as np
+import pandas as pd
+import rasterio
+from rasterio.warp import transform_bounds
+from rasterio.windows import Window, from_bounds
+from rasterio.enums import Resampling
+import planetary_computer as pc
+from pystac_client import Client
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+
+for d in ("data/processed", "data/metadata", "reports/figures", "docs"):
+    os.makedirs(d, exist_ok=True)
