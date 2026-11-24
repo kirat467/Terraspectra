@@ -44,3 +44,30 @@ dlat = (AOI_KM / 2) / 111.0
 dlon = (AOI_KM / 2) / (111.0 * np.cos(np.radians(lat0)))
 aoi = [lon0 - dlon, lat0 - dlat, lon0 + dlon, lat0 + dlat]
 print("AOI (lon/lat):", [round(v, 4) for v in aoi], "|", DATE_START, "->", DATE_END)
+# ============================================================
+# 1. Search Sentinel-2 L2A scenes
+# ============================================================
+cat = Client.open("https://planetarycomputer.microsoft.com/api/stac/v1", modifier=pc.sign_inplace)
+search = cat.search(collections=["sentinel-2-l2a"], bbox=aoi, datetime=f"{DATE_START}/{DATE_END}",
+                    query={"eo:cloud_cover": {"lt": MAX_CLOUD}})
+items = list(search.items())
+print("Scenes found:", len(items))
+
+
+def contains(b):
+    return b[0] <= aoi[0] and b[1] <= aoi[1] and b[2] >= aoi[2] and b[3] >= aoi[3]
+
+
+items = [it for it in items if it.bbox and contains(it.bbox)]
+best = {}
+for it in items:       # one scene per date: lowest cloud cover
+    d = it.datetime.date()
+    if d not in best or it.properties.get("eo:cloud_cover", 100) < best[d].properties.get("eo:cloud_cover", 100):
+        best[d] = it
+items = [best[d] for d in sorted(best)]
+print("Scenes fully covering the AOI (one per date):", len(items))
+if len(items) < 4:
+    raise SystemExit("Too few scenes. Widen DATE range, raise MAX_CLOUD or increase AOI_KM.")
+if len(items) > MAX_SCENES:
+    items = [items[i] for i in np.linspace(0, len(items) - 1, MAX_SCENES).astype(int)]
+    print("Subsampled to", len(items), "scenes")
