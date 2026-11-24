@@ -122,3 +122,36 @@ if obs.empty:
     raise SystemExit("No usable observations. Check network access to planetarycomputer.microsoft.com.")
 obs.to_csv("data/processed/ndvi_timeseries_long.csv", index=False)
 print(f"\nObservations: {len(obs)} | dates: {obs['date'].nunique()} | cells: {obs['cell'].nunique()}")
+# ============================================================
+# 3. Weather (NASA POWER) + backward-looking lag features
+# ============================================================
+print("\n===== Weather =====")
+w_start = (datetime.strptime(DATE_START, "%Y-%m-%d") - timedelta(days=21)).strftime("%Y%m%d")
+w_end = min(datetime.strptime(DATE_END, "%Y-%m-%d"), datetime.now() - timedelta(days=5)).strftime("%Y%m%d")
+params = "T2M,T2M_MAX,T2M_MIN,RH2M,PRECTOTCORR,ALLSKY_SFC_SW_DWN"
+url = ("https://power.larc.nasa.gov/api/temporal/daily/point"
+       f"?parameters={params}&community=AG&longitude={lon0:.4f}&latitude={lat0:.4f}&start={w_start}&end={w_end}&format=JSON")
+weather = None
+try:
+    with urllib.request.urlopen(url, timeout=90) as r:
+        par = json.loads(r.read().decode())["properties"]["parameter"]
+    weather = pd.DataFrame(par)
+    weather.index = pd.to_datetime(weather.index, format="%Y%m%d")
+    weather = weather.replace(-999, np.nan).rename(columns={
+        "T2M": "temp_mean", "T2M_MAX": "temp_max", "T2M_MIN": "temp_min", "RH2M": "humidity",
+        "PRECTOTCORR": "rain_mm", "ALLSKY_SFC_SW_DWN": "solar_rad"}).interpolate(limit=3)
+    wf = pd.DataFrame(index=weather.index)
+    wf["temp_7d"] = weather["temp_mean"].rolling(7, min_periods=4).mean()
+    wf["temp_range_7d"] = (weather["temp_max"] - weather["temp_min"]).rolling(7, min_periods=4).mean()
+    wf["humidity_7d"] = weather["humidity"].rolling(7, min_periods=4).mean()
+    wf["rain_7d"] = weather["rain_mm"].rolling(7, min_periods=4).sum()
+    wf["rain_14d"] = weather["rain_mm"].rolling(14, min_periods=7).sum()
+    wf["solar_7d"] = weather["solar_rad"].rolling(7, min_periods=4).mean()
+    fav = ((weather["temp_mean"].between(15, 30)) & (weather["humidity"] > 80)).astype(int)
+    wf["favourable_7d"] = fav.rolling(7, min_periods=4).sum()
+    wf["favourable_14d"] = fav.rolling(14, min_periods=7).sum()
+    weather.to_csv("data/metadata/weather_daily_timeseries.csv", index_label="date")
+    print(f"Weather days: {len(weather)} ({weather.index.min().date()} -> {weather.index.max().date()})")
+except Exception as e:
+    print("Weather download failed:", e, "\n-> continuing WITHOUT weather features (no fake data)")
+    wf = None
