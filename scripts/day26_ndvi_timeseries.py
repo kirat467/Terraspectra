@@ -155,3 +155,40 @@ try:
 except Exception as e:
     print("Weather download failed:", e, "\n-> continuing WITHOUT weather features (no fake data)")
     wf = None
+# ============================================================
+# 4. Forecasting-ready table (features use only information up to date t)
+# ============================================================
+print("\n===== Forecasting table =====")
+frames = []
+for cell, g in obs.sort_values("date").groupby("cell"):
+    g = g.copy()
+    g["ndvi_prev"] = g["ndvi"].shift(1)
+    g["days_since_prev"] = (g["date"] - g["date"].shift(1)).dt.days
+    g["ndvi_delta"] = g["ndvi"] - g["ndvi_prev"]
+    g["ndvi_next"] = g["ndvi"].shift(-1)
+    g["days_to_next"] = (g["date"].shift(-1) - g["date"]).dt.days
+    g["target_delta"] = g["ndvi_next"] - g["ndvi"]                 # regression target
+    g["target_drop"] = (g["target_delta"] < -DROP_THRESH).astype(float)   # classification target (stress PROXY)
+    g.loc[g["ndvi_next"].isna(), ["target_drop"]] = np.nan
+    frames.append(g)
+tab = pd.concat(frames, ignore_index=True)
+if wf is not None:
+    tab = tab.merge(wf, left_on="date", right_index=True, how="left")
+tab["doy"] = tab["date"].dt.dayofyear
+tab = tab.dropna(subset=["target_delta", "ndvi_prev"]).reset_index(drop=True)
+
+dates = sorted(tab["date"].unique())
+n = len(dates)
+cut1, cut2 = dates[int(n * 0.70) - 1], dates[max(int(n * 0.85) - 1, int(n * 0.70))]
+tab["split"] = np.where(tab["date"] <= cut1, "train", np.where(tab["date"] <= cut2, "val", "test"))
+tab.to_csv("data/processed/forecasting_table.csv", index=False)
+print(f"Rows: {len(tab)} | train/val/test: {tab['split'].value_counts().to_dict()} | "
+      f"split dates: train <= {pd.Timestamp(cut1).date()}, val <= {pd.Timestamp(cut2).date()}")
+print(f"Stress-proxy rate (next NDVI drop > {DROP_THRESH}): {tab['target_drop'].mean() * 100:.1f}%")
+
+if wf is not None:
+    wcols = list(wf.columns)
+    trn = tab[tab["split"] == "train"]
+    cor = trn[wcols + ["ndvi", "ndvi_delta"]].corrwith(trn["target_delta"], method="spearman").sort_values()
+    print("\nSpearman correlation with next-NDVI change (train):\n", cor.round(3).to_string())
+    cor.to_csv("data/metadata/forecast_feature_correlation.csv", header=["spearman_with_target_delta"])
