@@ -18,6 +18,9 @@ def predict_crop(
     if image.shape[0] == 0:
         raise ValueError("Prediction batch cannot be empty")
 
+    if not torch.isfinite(image).all():
+        raise ValueError("Input image must contain finite values")
+
     if not 0 <= confidence_threshold <= 100:
         raise ValueError("Invalid confidence threshold")
 
@@ -51,10 +54,7 @@ def predict_crop(
 
         if not torch.allclose(
             probabilities.sum(dim=1),
-            torch.ones(
-                probabilities.shape[0],
-                device=device
-            ),
+            torch.ones(probabilities.shape[0], device=device),
             atol=1e-5
         ):
             raise ValueError("Invalid prediction probabilities")

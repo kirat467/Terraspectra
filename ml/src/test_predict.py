@@ -133,10 +133,31 @@ def test_empty_batch_is_rejected_before_inference():
 
     images = torch.empty(0, 1)
 
-    with pytest.raises(
-        ValueError,
-        match="Prediction batch cannot be empty"
-    ):
+    with pytest.raises(ValueError, match="Prediction batch cannot be empty"):
+        predict_crop(
+            NeverCalledModel(),
+            images,
+            ["Healthy", "Rust", "Blight"]
+        )
+
+
+def test_nan_input_is_rejected():
+
+    images = torch.tensor([[float("nan")]])
+
+    with pytest.raises(ValueError, match="Input image must contain finite values"):
+        predict_crop(
+            NeverCalledModel(),
+            images,
+            ["Healthy", "Rust", "Blight"]
+        )
+
+
+def test_infinite_input_is_rejected():
+
+    images = torch.tensor([[float("inf")]])
+
+    with pytest.raises(ValueError, match="Input image must contain finite values"):
         predict_crop(
             NeverCalledModel(),
             images,
