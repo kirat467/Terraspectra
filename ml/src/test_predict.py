@@ -26,7 +26,7 @@ class InvalidPredictionModel(torch.nn.Module):
 class BatchPredictionModel(torch.nn.Module):
 
     def forward(self, images):
-        values = images[:, 0]
+        values = images[:, 0, 0, 0, 0]
 
         return torch.stack(
             [values, -values, torch.zeros_like(values)],
@@ -43,7 +43,6 @@ class NeverCalledModel(torch.nn.Module):
 def test_predict_3dcnn():
 
     class_names = ["Healthy", "Leaf Rust", "Blight"]
-
     model = Crop3DCNN(num_classes=3)
     images = torch.rand(4, 1, 200, 16, 16)
 
@@ -56,13 +55,12 @@ def test_predict_3dcnn():
 
 def test_top_predictions_are_sorted():
 
-    images = torch.rand(2, 1)
-    class_names = ["Healthy", "Rust", "Blight"]
+    images = torch.rand(2, 1, 1, 1, 1)
 
     results = predict_crop(
         FixedPredictionModel(),
         images,
-        class_names
+        ["Healthy", "Rust", "Blight"]
     )
 
     predictions = results[0]["top_predictions"]
@@ -70,16 +68,14 @@ def test_top_predictions_are_sorted():
     assert len(predictions) == 3
     assert predictions[0]["disease"] == "Healthy"
 
-    confidences = [
-        item["confidence"] for item in predictions
-    ]
+    confidences = [item["confidence"] for item in predictions]
 
     assert confidences == sorted(confidences, reverse=True)
 
 
 def test_prediction_confidences_are_valid():
 
-    images = torch.rand(1, 1)
+    images = torch.rand(1, 1, 1, 1, 1)
 
     results = predict_crop(
         FixedPredictionModel(),
@@ -97,7 +93,7 @@ def test_prediction_confidences_are_valid():
 
 def test_invalid_nan_outputs_are_rejected():
 
-    images = torch.rand(1, 1)
+    images = torch.rand(1, 1, 1, 1, 1)
 
     with pytest.raises(ValueError, match="finite"):
         predict_crop(
@@ -109,7 +105,11 @@ def test_invalid_nan_outputs_are_rejected():
 
 def test_batch_predictions_are_individual():
 
-    images = torch.tensor([[2.0], [0.5], [-2.0]])
+    images = torch.tensor([
+        [[[[2.0]]]],
+        [[[[0.5]]]],
+        [[[[-2.0]]]]
+    ])
 
     class_names = ["Healthy", "Rust", "Blight"]
 
@@ -131,7 +131,7 @@ def test_batch_predictions_are_individual():
 
 def test_empty_batch_is_rejected_before_inference():
 
-    images = torch.empty(0, 1)
+    images = torch.empty(0, 1, 1, 1, 1)
 
     with pytest.raises(ValueError, match="Prediction batch cannot be empty"):
         predict_crop(
@@ -143,7 +143,7 @@ def test_empty_batch_is_rejected_before_inference():
 
 def test_nan_input_is_rejected():
 
-    images = torch.tensor([[float("nan")]])
+    images = torch.full((1, 1, 1, 1, 1), float("nan"))
 
     with pytest.raises(ValueError, match="Input image must contain finite values"):
         predict_crop(
@@ -155,9 +155,33 @@ def test_nan_input_is_rejected():
 
 def test_infinite_input_is_rejected():
 
-    images = torch.tensor([[float("inf")]])
+    images = torch.full((1, 1, 1, 1, 1), float("inf"))
 
     with pytest.raises(ValueError, match="Input image must contain finite values"):
+        predict_crop(
+            NeverCalledModel(),
+            images,
+            ["Healthy", "Rust", "Blight"]
+        )
+
+
+def test_invalid_input_dimensions_are_rejected():
+
+    images = torch.rand(1, 1, 16, 16)
+
+    with pytest.raises(ValueError, match="5D tensor"):
+        predict_crop(
+            NeverCalledModel(),
+            images,
+            ["Healthy", "Rust", "Blight"]
+        )
+
+
+def test_invalid_channel_count_is_rejected():
+
+    images = torch.rand(1, 3, 16, 16, 16)
+
+    with pytest.raises(ValueError, match="exactly 1 channel"):
         predict_crop(
             NeverCalledModel(),
             images,
