@@ -7,9 +7,23 @@ def calculate_confidence_calibration(
     actual_labels,
     num_bins=10
 ):
-    confidences = np.asarray(confidences, dtype=float)
-    predictions = np.asarray(predictions)
-    actual_labels = np.asarray(actual_labels)
+
+    try:
+        confidences = np.asarray(confidences, dtype=float)
+        predictions = np.asarray(predictions)
+        actual_labels = np.asarray(actual_labels)
+
+    except (TypeError, ValueError) as error:
+        raise ValueError("Inputs must contain valid numeric values") from error
+
+    if confidences.ndim != 1:
+        raise ValueError("Confidences must be 1D")
+
+    if predictions.ndim != 1:
+        raise ValueError("Predictions must be 1D")
+
+    if actual_labels.ndim != 1:
+        raise ValueError("Actual labels must be 1D")
 
     if not (
         len(confidences) == len(predictions) == len(actual_labels)
@@ -19,23 +33,39 @@ def calculate_confidence_calibration(
     if len(confidences) == 0:
         raise ValueError("Input arrays cannot be empty")
 
+    if not isinstance(num_bins, (int, np.integer)) or isinstance(
+        num_bins, (bool, np.bool_)
+    ):
+        raise ValueError("Number of bins must be a positive integer")
+
+    if num_bins <= 0:
+        raise ValueError("Number of bins must be positive")
+
     if not np.all(np.isfinite(confidences)):
         raise ValueError("Confidences must contain finite values")
 
     if np.any((confidences < 0) | (confidences > 1)):
         raise ValueError("Confidences must be between 0 and 1")
 
-    if num_bins <= 0:
-        raise ValueError("Number of bins must be positive")
+    try:
+        if not np.all(np.isfinite(predictions)):
+            raise ValueError("Predictions must contain finite values")
 
-    if not np.all(np.isfinite(predictions)) or not np.all(np.isfinite(actual_labels)):
-        raise ValueError("Labels must contain finite values")
+        if not np.all(np.isfinite(actual_labels)):
+            raise ValueError("Actual labels must contain finite values")
 
-    if not np.all(predictions == predictions.astype(int)):
-        raise ValueError("Predictions must be integer class labels")
+        if not np.all(predictions == predictions.astype(int)):
+            raise ValueError("Predictions must be integer class labels")
 
-    if not np.all(actual_labels == actual_labels.astype(int)):
-        raise ValueError("Actual labels must be integer class labels")
+        if not np.all(actual_labels == actual_labels.astype(int)):
+            raise ValueError("Actual labels must be integer class labels")
+
+    except (TypeError, ValueError, OverflowError) as error:
+        if isinstance(error, ValueError) and str(error).startswith(
+            ("Predictions", "Actual labels")
+        ):
+            raise
+        raise ValueError("Labels must contain valid integer values") from error
 
     predictions = predictions.astype(int)
     actual_labels = actual_labels.astype(int)
@@ -43,15 +73,19 @@ def calculate_confidence_calibration(
     correct = (predictions == actual_labels).astype(float)
 
     bin_edges = np.linspace(0, 1, num_bins + 1)
+
     bin_results = []
     ece = 0.0
+    mce = 0.0
 
     for i in range(num_bins):
+
         if i == num_bins - 1:
             mask = (
                 (confidences >= bin_edges[i]) &
                 (confidences <= bin_edges[i + 1])
             )
+
         else:
             mask = (
                 (confidences >= bin_edges[i]) &
@@ -66,9 +100,11 @@ def calculate_confidence_calibration(
         average_confidence = float(np.mean(confidences[mask]))
         accuracy = float(np.mean(correct[mask]))
 
-        ece += (count / len(confidences)) * abs(
-            accuracy - average_confidence
-        )
+        calibration_error = abs(accuracy - average_confidence)
+
+        ece += (count / len(confidences)) * calibration_error
+
+        mce = max(mce, calibration_error)
 
         bin_results.append({
             "bin": i + 1,
@@ -76,7 +112,8 @@ def calculate_confidence_calibration(
             "upper_bound": float(bin_edges[i + 1]),
             "count": count,
             "average_confidence": average_confidence,
-            "accuracy": accuracy
+            "accuracy": accuracy,
+            "calibration_error": float(calibration_error)
         })
 
     brier_score = float(np.mean((confidences - correct) ** 2))
@@ -86,8 +123,10 @@ def calculate_confidence_calibration(
 
     if average_confidence > accuracy:
         reliability = "Overconfident"
+
     elif average_confidence < accuracy:
         reliability = "Underconfident"
+
     else:
         reliability = "Well Balanced"
 
@@ -96,6 +135,7 @@ def calculate_confidence_calibration(
         "accuracy": accuracy,
         "average_confidence": average_confidence,
         "expected_calibration_error": float(ece),
+        "maximum_calibration_error": float(mce),
         "brier_score": brier_score,
         "reliability": reliability,
         "calibration_bins": bin_results
