@@ -204,3 +204,38 @@ if "target_drop" in tab.columns and WEATHER is not None:
         print("PR-AUC should be clearly above the prevalence (random) and the momentum baseline to be useful.")
     else:
         print("Too few positives for a reliable classifier (need >=5 train and >=3 test). Skipping.")
+# ============================================================
+# 4. Importance + figures
+# ============================================================
+imp_df = None
+if best in store:
+    _, bm, bf = store[best]
+    pi = permutation_importance(bm, te[bf], te[TARGET], n_repeats=20, random_state=SEED, scoring="neg_mean_absolute_error")
+    imp_df = pd.DataFrame({"feature": bf, "mae_increase": pi.importances_mean, "std": pi.importances_std}).sort_values("mae_increase", ascending=False)
+    imp_df.to_csv("data/metadata/forecast_feature_importance.csv", index=False)
+    print("\nPermutation importance (test, descriptive only):\n", imp_df.head(10).round(4).to_string(index=False))
+
+fig, ax = plt.subplots(figsize=(9, 4.5))
+o = res.sort_values("test_mae")
+ax.barh(o["model"], o["test_mae"], color=["tab:green" if m == best else "tab:gray" for m in o["model"]])
+ax.axvline(persist_mae, color="red", ls="--", label="persistence")
+ax.set_xlabel("Test MAE (NDVI change)"); ax.set_title("Forecasting baselines (green = best on validation)"); ax.legend()
+plt.tight_layout(); plt.savefig("reports/figures/d27_model_comparison.png", dpi=150); plt.close()
+
+pt_best = store[best][0]
+fig, ax = plt.subplots(1, 2, figsize=(12, 4.5))
+ax[0].scatter(y_te, pt_best, s=12, alpha=0.5)
+lim = [min(y_te.min(), pt_best.min()), max(y_te.max(), pt_best.max())]
+ax[0].plot(lim, lim, "r--"); ax[0].set_xlabel("actual NDVI change"); ax[0].set_ylabel("predicted"); ax[0].set_title(f"{best}: test")
+dd = te.assign(pred=pt_best).groupby("date")[[TARGET, "pred"]].mean()
+ax[1].plot(dd.index, dd[TARGET], "o-", label="actual (mean of cells)"); ax[1].plot(dd.index, dd["pred"], "s--", label="predicted")
+ax[1].axhline(0, color="gray", lw=0.8); ax[1].set_title("Test period: mean NDVI change per date"); ax[1].legend()
+plt.setp(ax[1].get_xticklabels(), rotation=30)
+plt.tight_layout(); plt.savefig("reports/figures/d27_predictions.png", dpi=150); plt.close()
+
+if imp_df is not None:
+    fig, ax = plt.subplots(figsize=(7, 4))
+    t10 = imp_df.head(10).iloc[::-1]
+    ax.barh(t10["feature"], t10["mae_increase"], xerr=t10["std"])
+    ax.set_xlabel("MAE increase when shuffled"); ax.set_title("Feature importance (test, descriptive)")
+    plt.tight_layout(); plt.savefig("reports/figures/d27_feature_importance.png", dpi=150); plt.close()
