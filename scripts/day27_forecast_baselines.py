@@ -87,3 +87,57 @@ if WEATHER:
     cfgs += [("ridge NDVI+weather", ridge, NDVI_F + WEATHER, True),
              ("random forest NDVI+weather", rf, NDVI_F + WEATHER, True),
              ("hist-GB NDVI+weather", hgb, NDVI_F + WEATHER, True)]
+    # ============================================================
+# 1. Evaluate (val: fit on purged train | test: fit on purged train+val)
+# ============================================================
+print("\n===== Regression: next-observation NDVI change =====")
+rows, store = [], {}
+for name, mk, feats, learned in cfgs:
+    mv = mk().fit(tr_p[feats], tr_p[TARGET])
+    pv = mv.predict(va[feats])
+    mt = mk().fit(trva_p[feats], trva_p[TARGET])
+    pt = mt.predict(te[feats])
+    store[name] = (pt, mt, feats)
+    rows.append({"model": name, "learned": learned, "uses_weather": any(w in feats for w in WEATHER),
+                 "val_mae": mean_absolute_error(va[TARGET], pv),
+                 "test_mae": mean_absolute_error(te[TARGET], pt),
+                 "test_rmse": float(np.sqrt(mean_squared_error(te[TARGET], pt))),
+                 "test_r2": r2_score(te[TARGET], pt)})
+res = pd.DataFrame(rows)
+persist_mae = float(res.loc[res["model"] == "persistence (delta=0)", "test_mae"].iloc[0])
+res["test_skill_vs_persistence"] = 1 - res["test_mae"] / persist_mae
+res.round(4).to_csv("data/metadata/forecast_results.csv", index=False)
+print(res.drop(columns=["learned"]).round(4).to_string(index=False))
+print("(skill > 0 means better than 'no change'; r2 < 0 means worse than predicting the mean)")
+
+learned_df = res[res["learned"]]
+best = learned_df.sort_values("val_mae").iloc[0]["model"]        # chosen on VALIDATION, not test
+print(f"\nBest learned model by validation MAE: {best}")
+
+
+def boot_diff(df, ea, eb, n=1000):
+    d = pd.DataFrame({"date": df["date"].values, "diff": np.asarray(ea) - np.asarray(eb)})
+    g = d.groupby("date")["diff"].agg(["sum", "count"])
+    s, c = g["sum"].values, g["count"].values
+    rng = np.random.default_rng(SEED)
+    out = [s[i].sum() / c[i].sum() for i in (rng.integers(0, len(g), len(g)) for _ in range(n))]
+    return float(np.mean(np.asarray(ea) - np.asarray(eb))), float(np.percentile(out, 2.5)), float(np.percentile(out, 97.5))
+
+
+y_te = te[TARGET].values
+err = {k: np.abs(v[0] - y_te) for k, v in store.items()}
+md, lo, hi = boot_diff(te, err[best], err["persistence (delta=0)"])
+beat = hi < 0
+print(f"MAE difference (best - persistence): {md:+.4f}  95% CI [{lo:+.4f}, {hi:+.4f}]  "
+      + ("-> significantly better than persistence" if beat else "-> NOT clearly better than persistence"))
+
+weather_effect = None
+if WEATHER:
+    pair = [("random forest NDVI-only", "random forest NDVI+weather"), ("hist-GB NDVI-only", "hist-GB NDVI+weather"),
+            ("ridge NDVI-only", "ridge NDVI+weather")]
+    print("\nDoes weather help? (MAE with weather - MAE without; negative = helps)")
+    weather_effect = {}
+    for a, b in pair:
+        d, l, h = boot_diff(te, err[b], err[a])
+        weather_effect[b] = (d, l, h)
+        print(f"  {b:32s} {d:+.4f}  95% CI [{l:+.4f}, {h:+.4f}]  " + ("helps" if h < 0 else ("hurts" if l > 0 else "no clear effect")))
