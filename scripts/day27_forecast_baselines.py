@@ -168,3 +168,39 @@ if cvr:
     cvd.to_csv("data/metadata/forecast_cv.csv", index=False)
 else:
     print("Not enough data for CV folds.")
+    # ============================================================
+# 3. Stress-proxy classification (next NDVI drop)
+# ============================================================
+print("\n===== Classification: next-NDVI drop (stress PROXY, not disease) =====")
+cls_summary = None
+if "target_drop" in tab.columns and WEATHER is not None:
+    cf = NDVI_F + WEATHER
+    trc, vac, tec = tr_p.dropna(subset=["target_drop"]), va.dropna(subset=["target_drop"]), te.dropna(subset=["target_drop"])
+    pos_tr, pos_te = int(trc["target_drop"].sum()), int(tec["target_drop"].sum())
+    print(f"Positives: train {pos_tr}/{len(trc)} | test {pos_te}/{len(tec)}")
+    if pos_tr >= 5 and pos_te >= 3 and trc["target_drop"].nunique() == 2:
+        mk_c = lambda: make_pipeline(SimpleImputer(strategy="median"),
+                                     RandomForestClassifier(300, min_samples_leaf=3, class_weight="balanced_subsample",
+                                                            random_state=SEED, n_jobs=-1))
+        cv_model = mk_c().fit(trc[cf], trc["target_drop"])
+        pv = cv_model.predict_proba(vac[cf])[:, 1]
+        thr = 0.5
+        if vac["target_drop"].nunique() == 2:
+            p_, r_, t_ = precision_recall_curve(vac["target_drop"], pv)
+            f1s = 2 * p_[:-1] * r_[:-1] / (p_[:-1] + r_[:-1] + 1e-9)
+            thr = float(t_[int(np.argmax(f1s))])
+        trva_c = pd.concat([tr, va]).query("next_date <= @test_start").dropna(subset=["target_drop"])
+        fm = mk_c().fit(trva_c[cf], trva_c["target_drop"])
+        pt_ = fm.predict_proba(tec[cf])[:, 1]
+        yb = tec["target_drop"].values
+        pred = pt_ >= thr
+        tp = int(((pred == 1) & (yb == 1)).sum())
+        prec, rec = tp / max(pred.sum(), 1), tp / max(yb.sum(), 1)
+        mom = average_precision_score(yb, -tec["ndvi_delta"].values)
+        cls_summary = {"prevalence_test": float(yb.mean()), "pr_auc_model": float(average_precision_score(yb, pt_)),
+                       "pr_auc_momentum_baseline": float(mom), "roc_auc_model": float(roc_auc_score(yb, pt_)),
+                       "threshold_from_val": thr, "precision": prec, "recall": rec, "f1": 2 * prec * rec / (prec + rec + 1e-9)}
+        print(json.dumps({k: round(v, 3) for k, v in cls_summary.items()}, indent=2))
+        print("PR-AUC should be clearly above the prevalence (random) and the momentum baseline to be useful.")
+    else:
+        print("Too few positives for a reliable classifier (need >=5 train and >=3 test). Skipping.")
