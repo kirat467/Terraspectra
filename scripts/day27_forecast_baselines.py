@@ -141,3 +141,30 @@ if WEATHER:
         d, l, h = boot_diff(te, err[b], err[a])
         weather_effect[b] = (d, l, h)
         print(f"  {b:32s} {d:+.4f}  95% CI [{l:+.4f}, {h:+.4f}]  " + ("helps" if h < 0 else ("hurts" if l > 0 else "no clear effect")))
+        # ============================================================
+# 2. Expanding-window CV over dates (train+val pool)
+# ============================================================
+print("\n===== Expanding-window CV (purged) =====")
+pool = pd.concat([tr, va])
+dts = sorted(pool["date"].unique())
+chunks = np.array_split(dts, 5)
+cv_cfg = [c for c in cfgs if c[0] in ("persistence (delta=0)", "random forest NDVI-only", "random forest NDVI+weather")]
+cvr = []
+for k in range(1, 5):
+    test_d = set(chunks[k])
+    tst = pool[pool["date"].isin(test_d)]
+    trn = pool[pool["date"].isin(set(np.concatenate(chunks[:k])))]
+    trn = trn[trn["next_date"] <= tst["date"].min()]
+    if len(trn) < 50 or len(tst) < 10:
+        continue
+    row = {"fold": k, "train_rows": len(trn), "test_rows": len(tst)}
+    for name, mk, feats, _ in cv_cfg:
+        row[name] = mean_absolute_error(tst[TARGET], mk().fit(trn[feats], trn[TARGET]).predict(tst[feats]))
+    cvr.append(row)
+if cvr:
+    cvd = pd.DataFrame(cvr)
+    print(cvd.round(4).to_string(index=False))
+    print("Mean MAE over folds:", cvd[[c[0] for c in cv_cfg]].mean().round(4).to_dict())
+    cvd.to_csv("data/metadata/forecast_cv.csv", index=False)
+else:
+    print("Not enough data for CV folds.")
