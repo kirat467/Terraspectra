@@ -1,4 +1,6 @@
 import torch
+import pytest
+
 from torch.utils.data import TensorDataset, DataLoader
 
 from model_3dcnn import Crop3DCNN
@@ -8,10 +10,12 @@ from evaluate import evaluate_model
 class FixedOutputModel(torch.nn.Module):
 
     def forward(self, images):
+
         logits = torch.tensor(
             [5.0, 4.0, 3.0, 2.0, 1.0],
             device=images.device
         )
+
         return logits.unsqueeze(0).expand(images.size(0), -1)
 
 
@@ -80,7 +84,6 @@ def test_top3_accuracy():
 
     results = evaluate_model(model, loader)
 
-    # Class 2 is in top 3; class 3 is not.
     assert results["top3_accuracy"] == 0.5
 
 
@@ -97,3 +100,41 @@ def test_top3_accuracy_with_all_correct():
     results = evaluate_model(model, loader)
 
     assert results["top3_accuracy"] == 1.0
+
+
+def test_empty_evaluation_dataset():
+
+    images = torch.empty(0, 1)
+    labels = torch.empty(0, dtype=torch.long)
+
+    dataset = TensorDataset(images, labels)
+    loader = DataLoader(dataset, batch_size=2)
+
+    with pytest.raises(ValueError, match="Evaluation dataset is empty"):
+        evaluate_model(FixedOutputModel(), loader)
+
+
+def test_nan_evaluation_images():
+
+    images = torch.rand(2, 1)
+    images[0, 0] = float("nan")
+
+    labels = torch.tensor([0, 1])
+
+    dataset = TensorDataset(images, labels)
+    loader = DataLoader(dataset, batch_size=2)
+
+    with pytest.raises(ValueError, match="finite values"):
+        evaluate_model(FixedOutputModel(), loader)
+
+
+def test_invalid_evaluation_labels():
+
+    images = torch.rand(2, 1)
+    labels = torch.tensor([0, 5])
+
+    dataset = TensorDataset(images, labels)
+    loader = DataLoader(dataset, batch_size=2)
+
+    with pytest.raises(ValueError, match="outside model class range"):
+        evaluate_model(FixedOutputModel(), loader)
