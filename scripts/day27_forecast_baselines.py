@@ -50,3 +50,40 @@ tr_p = tr[tr["next_date"] <= val_start]                                   # purg
 trva_p = pd.concat([tr, va]).query("next_date <= @test_start")           # purge for the test fit
 print(f"Train {len(tr)} (purged {len(tr_p)}) | val {len(va)} | test {len(te)} (final fit rows {len(trva_p)})")
 print(f"Effective independent information = number of dates: train {tr['date'].nunique()}, val {va['date'].nunique()}, test {te['date'].nunique()}")
+# ============================================================
+# Models
+# ============================================================
+class Zero:
+    def fit(self, X, y): return self
+    def predict(self, X): return np.zeros(len(X))
+
+
+class MeanDelta:
+    def fit(self, X, y):
+        self.m = float(np.mean(y)); return self
+    def predict(self, X): return np.full(len(X), self.m)
+
+
+class DoyProfile:
+    def fit(self, X, y):
+        b = (X["doy"].values // 30)
+        self.t = pd.Series(np.asarray(y)).groupby(b).mean().to_dict()
+        self.g = float(np.mean(y)); return self
+    def predict(self, X): return np.array([self.t.get(int(v // 30), self.g) for v in X["doy"].values])
+
+
+ridge = lambda: make_pipeline(SimpleImputer(strategy="median"), StandardScaler(), Ridge(alpha=3.0))
+rf = lambda: make_pipeline(SimpleImputer(strategy="median"),
+                           RandomForestRegressor(300, min_samples_leaf=3, random_state=SEED, n_jobs=-1))
+hgb = lambda: HistGradientBoostingRegressor(max_depth=3, learning_rate=0.05, max_iter=200, random_state=SEED)
+
+cfgs = [("persistence (delta=0)", Zero, ["ndvi"], False),
+        ("train mean delta", MeanDelta, ["ndvi"], False),
+        ("seasonal profile (doy)", DoyProfile, ["doy"], False),
+        ("ridge NDVI-only", ridge, NDVI_F, True),
+        ("random forest NDVI-only", rf, NDVI_F, True),
+        ("hist-GB NDVI-only", hgb, NDVI_F, True)]
+if WEATHER:
+    cfgs += [("ridge NDVI+weather", ridge, NDVI_F + WEATHER, True),
+             ("random forest NDVI+weather", rf, NDVI_F + WEATHER, True),
+             ("hist-GB NDVI+weather", hgb, NDVI_F + WEATHER, True)]
