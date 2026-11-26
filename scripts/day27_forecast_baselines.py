@@ -239,3 +239,46 @@ if imp_df is not None:
     ax.barh(t10["feature"], t10["mae_increase"], xerr=t10["std"])
     ax.set_xlabel("MAE increase when shuffled"); ax.set_title("Feature importance (test, descriptive)")
     plt.tight_layout(); plt.savefig("reports/figures/d27_feature_importance.png", dpi=150); plt.close()
+# ============================================================
+# 5. Verdict + docs
+# ============================================================
+best_row = res[res["model"] == best].iloc[0]
+verdict = [f"Best learned model (chosen on validation): {best}; test MAE {best_row['test_mae']:.4f} vs persistence {persist_mae:.4f} "
+           f"(skill {best_row['test_skill_vs_persistence']:+.2%}, R2 {best_row['test_r2']:.3f})."]
+verdict.append("It is clearly better than persistence (bootstrap CI excludes 0)." if beat else
+               "It is NOT clearly better than persistence; with this amount of data NDVI(t) alone is a hard baseline to beat.")
+if weather_effect:
+    helped = [k for k, (d, l, h) in weather_effect.items() if h < 0]
+    verdict.append("Weather features gave a measurable improvement for: " + ", ".join(helped) + "." if helped
+                   else "Weather features gave no statistically clear improvement.")
+for v in verdict:
+    print("-", v)
+
+with open("docs/day27_forecast_baselines.md", "w", encoding="utf-8") as f:
+    f.write(f"# Day 27: forecasting baselines ({date.today()})\n\n")
+    f.write("Target: next-observation NDVI change (regression) and NDVI drop (classification). **Stress proxies, not disease labels.**\n\n")
+    f.write("Protocol: temporal split, training rows purged if their target looked into the evaluation period, best model chosen on validation, "
+            "date-block bootstrap CIs (cells are spatially correlated, so independent information = number of dates).\n\n")
+    f.write("| model | weather | val MAE | test MAE | test RMSE | test R2 | skill vs persistence |\n|---|---|---|---|---|---|---|\n")
+    for r in res.itertuples():
+        f.write(f"| {r.model} | {r.uses_weather} | {r.val_mae:.4f} | {r.test_mae:.4f} | {r.test_rmse:.4f} | {r.test_r2:.3f} | {r.test_skill_vs_persistence:+.2%} |\n")
+    f.write("\n## Verdict\n" + "\n".join(f"- {v}" for v in verdict) + "\n")
+    if cls_summary:
+        f.write("\n## Classification (stress proxy)\n" + "\n".join(f"- {k}: {v:.3f}" for k, v in cls_summary.items()) + "\n")
+    f.write("\n## Limitations\n- Few dates and one small area: wide uncertainty.\n- NDVI change can also come from harvest, irrigation, drought; not only disease.\n"
+            "- Real disease labels are needed for a true disease-forecasting claim.\n")
+
+with open("docs/forecast_writeup.txt", "w", encoding="utf-8") as f:
+    f.write("Built forecasting baselines on the Sentinel-2 NDVI + NASA POWER weather table using a temporal split with leakage purging. "
+            + verdict[0] + " " + verdict[1] + (" " + verdict[2] if weather_effect else "")
+            + " Targets are NDVI-change stress proxies; confirmed disease labels are still required for disease forecasting.")
+print("\nSaved docs/day27_forecast_baselines.md, docs/forecast_writeup.txt, data/metadata/forecast_results.csv")
+
+try:
+    subprocess.run(["git", "add", "-A"], check=True)
+    subprocess.run(["git", "commit", "-m", "Day 27: forecasting baselines with temporal split and bootstrap CIs"], check=False)
+    if subprocess.run(["git", "remote"], capture_output=True, text=True).stdout.strip():
+        subprocess.run(["git", "push"], check=False)
+except Exception as e:
+    print("Git issue:", e)
+print("\nDAY 27 DONE. Figures: d27_model_comparison, d27_predictions, d27_feature_importance")
