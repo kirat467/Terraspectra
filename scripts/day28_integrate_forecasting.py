@@ -232,3 +232,66 @@ if os.path.exists(PPTX):
     print("Updated", PPTX, "(+2 slides)")
 else:
     print("PPT not found (run day19_20_all.py first); skipping")
+# ============================================================
+# 4. Forecasting loader + handover zip
+# ============================================================
+LOADER = r'''
+"""Load the forecasting table. Run from the folder with forecasting_table.csv."""
+import pandas as pd
+
+NDVI_FEATURES = ["ndvi", "ndvi_prev", "ndvi_delta", "days_since_prev", "doy", "ndvi_std"]
+WEATHER_FEATURES = ["temp_7d", "temp_range_7d", "humidity_7d", "rain_7d", "rain_14d",
+                    "solar_7d", "favourable_7d", "favourable_14d"]
+TARGET_REG, TARGET_CLS = "target_delta", "target_drop"
+# NEVER use as features (they contain future information): ndvi_next, days_to_next, target_delta, target_drop
+
+
+def load(path="forecasting_table.csv"):
+    t = pd.read_csv(path, parse_dates=["date"])
+    t["next_date"] = t["date"] + pd.to_timedelta(t["days_to_next"], unit="D")
+    return t
+
+
+def temporal_splits(t):
+    """Train/val/test by date. Purge rows whose next observation falls in the evaluation period."""
+    tr, va, te = (t[t["split"] == s] for s in ("train", "val", "test"))
+    tr_purged = tr[tr["next_date"] <= va["date"].min()]
+    trva_purged = pd.concat([tr, va])
+    trva_purged = trva_purged[trva_purged["next_date"] <= te["date"].min()]
+    return tr_purged, va, te, trva_purged
+
+
+if __name__ == "__main__":
+    t = load()
+    tr, va, te, trva = temporal_splits(t)
+    feats = [c for c in NDVI_FEATURES + WEATHER_FEATURES if c in t.columns]
+    print("rows", len(t), "| train", len(tr), "val", len(va), "test", len(te))
+    print("features:", feats)
+    print("Baseline to beat: persistence (predict delta = 0). Report MAE with a date-block bootstrap CI.")
+'''
+open("handover/load_forecasting_example.py", "w", encoding="utf-8").write(LOADER.lstrip("\n"))
+
+zp = "outputs/TerraSpectra_Dataset_Handover.zip"
+old = {}
+if os.path.exists(zp):
+    with zipfile.ZipFile(zp) as z:
+        old = {n: z.read(n) for n in z.namelist()}
+extra = {
+    "data/processed/forecasting_table.csv": "forecasting_table.csv",
+    "data/processed/ndvi_timeseries_long.csv": "ndvi_timeseries_long.csv",
+    "data/metadata/weather_daily_timeseries.csv": "weather_daily_timeseries.csv",
+    "data/metadata/forecast_results.csv": "forecast_results.csv",
+    "data/metadata/forecast_cv.csv": "forecast_cv.csv",
+    "docs/day27_forecast_baselines.md": "forecast_baselines.md",
+    "handover/load_forecasting_example.py": "load_forecasting_example.py",
+    REPORT: "TerraSpectra_Project_Report.docx",
+    PPTX: "TerraSpectra_DataPrep_Section.pptx",
+}
+for src, arc in extra.items():
+    if os.path.exists(src):
+        with open(src, "rb") as f:
+            old[f"TerraSpectra_Handover/{arc}"] = f.read()
+with zipfile.ZipFile(zp, "w", zipfile.ZIP_DEFLATED) as z:
+    for n, b in old.items():
+        z.writestr(n, b)
+print(f"Rebuilt {zp}: {len(old)} files, {os.path.getsize(zp) / 1e6:.1f} MB")
