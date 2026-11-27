@@ -51,3 +51,39 @@ def test_invalid_sample_type():
 def test_none_prediction():
     with pytest.raises(ValueError):
         analyze_prediction_consistency([[1, None]])
+
+
+def test_float_predictions():
+    with pytest.raises(ValueError):
+        analyze_prediction_consistency([[1, 2.5]])
+
+
+def test_string_predictions():
+    with pytest.raises(ValueError):
+        analyze_prediction_consistency([["healthy", "disease"]])
+
+
+def test_boolean_predictions():
+    with pytest.raises(ValueError):
+        analyze_prediction_consistency([[True, False]])
+
+
+def test_nested_predictions():
+    with pytest.raises(ValueError):
+        analyze_prediction_consistency([[[1], [2]]])
+
+
+def test_tie_predictions():
+    result = analyze_prediction_consistency([[1, 2]])
+
+    assert result["sample_results"][0]["consistency_score"] == 0.5
+    assert result["sample_results"][0]["consistent"] is False
+
+
+def test_average_consistency():
+    result = analyze_prediction_consistency([
+        [1, 1, 1],
+        [2, 2, 3]
+    ])
+
+    assert result["average_consistency"] == 0.8334

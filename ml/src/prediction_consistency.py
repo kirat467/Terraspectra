@@ -1,3 +1,6 @@
+from numbers import Integral
+
+
 def analyze_prediction_consistency(predictions):
     if not isinstance(predictions, list):
         raise TypeError("Predictions must be a list")
@@ -9,17 +12,20 @@ def analyze_prediction_consistency(predictions):
 
     for index, sample_predictions in enumerate(predictions):
         if not isinstance(sample_predictions, (list, tuple)):
-            raise TypeError("Each sample must contain a list of predictions")
+            raise TypeError("Each sample must contain a list or tuple of predictions")
 
         if not sample_predictions:
             raise ValueError("Each sample must have at least one prediction")
 
-        if any(prediction is None for prediction in sample_predictions):
-            raise ValueError("Predictions cannot contain None")
-
         counts = {}
 
         for prediction in sample_predictions:
+            if prediction is None:
+                raise ValueError("Predictions cannot contain None")
+
+            if isinstance(prediction, bool) or not isinstance(prediction, Integral):
+                raise ValueError("Predictions must contain integer labels")
+
             counts[prediction] = counts.get(prediction, 0) + 1
 
         most_common = max(counts, key=counts.get)
