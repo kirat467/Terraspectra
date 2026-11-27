@@ -26,7 +26,10 @@ def test_misclassified_samples():
 
 
 def test_class_analysis():
-    result = analyze_prediction_errors([0, 0, 1, 1], [0, 1, 1, 1])
+    result = analyze_prediction_errors(
+        [0, 0, 1, 1],
+        [0, 1, 1, 1]
+    )
 
     assert result["class_analysis"][0]["error_rate"] == 50.0
     assert result["class_analysis"][1]["error_rate"] == 0.0
@@ -61,3 +64,26 @@ def test_different_lengths():
 def test_invalid_input_type():
     with pytest.raises(ValueError):
         analyze_prediction_errors("012", [0, 1, 2])
+
+
+def test_non_integer_labels():
+    with pytest.raises(ValueError):
+        analyze_prediction_errors([0, 1.5], [0, 1])
+
+
+def test_boolean_labels():
+    with pytest.raises(ValueError):
+        analyze_prediction_errors([True, 0], [1, 0])
+
+
+def test_nested_labels():
+    with pytest.raises(ValueError):
+        analyze_prediction_errors([[0], [1]], [0, 1])
+
+
+def test_missing_predicted_class():
+    result = analyze_prediction_errors([0, 0, 1], [0, 0, 0])
+
+    assert result["class_analysis"][1]["total_samples"] == 1
+    assert result["class_analysis"][1]["incorrect_predictions"] == 1
+    assert result["class_analysis"][1]["error_rate"] == 100.0
