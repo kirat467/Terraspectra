@@ -28,6 +28,7 @@ def test_empty_predictions():
     assert result["healthy_count"] == 0
     assert result["diseased_count"] == 0
     assert result["average_confidence"] == 0
+    assert result["disease_distribution"] == {}
 
 
 def test_all_healthy():
@@ -44,18 +45,104 @@ def test_all_healthy():
 
 
 def test_invalid_confidence():
-    predictions = [
-        {"prediction": "Healthy", "confidence": 150}
-    ]
-
     with pytest.raises(ValueError):
-        generate_prediction_summary(predictions)
+        generate_prediction_summary([
+            {"prediction": "Healthy", "confidence": 150}
+        ])
 
 
 def test_invalid_disease():
-    predictions = [
-        {"prediction": "", "confidence": 90}
-    ]
-
     with pytest.raises(ValueError):
-        generate_prediction_summary(predictions)
+        generate_prediction_summary([
+            {"prediction": "", "confidence": 90}
+        ])
+
+
+def test_invalid_input_type():
+    with pytest.raises(ValueError):
+        generate_prediction_summary("invalid")
+
+
+def test_invalid_prediction_record():
+    with pytest.raises(ValueError):
+        generate_prediction_summary(["Healthy"])
+
+
+def test_missing_prediction():
+    with pytest.raises(ValueError):
+        generate_prediction_summary([
+            {"confidence": 90}
+        ])
+
+
+def test_missing_confidence():
+    with pytest.raises(ValueError):
+        generate_prediction_summary([
+            {"prediction": "Healthy"}
+        ])
+
+
+def test_negative_confidence():
+    with pytest.raises(ValueError):
+        generate_prediction_summary([
+            {"prediction": "Healthy", "confidence": -5}
+        ])
+
+
+def test_boolean_confidence():
+    with pytest.raises(ValueError):
+        generate_prediction_summary([
+            {"prediction": "Healthy", "confidence": True}
+        ])
+
+
+def test_nan_confidence():
+    with pytest.raises(ValueError):
+        generate_prediction_summary([
+            {"prediction": "Healthy", "confidence": float("nan")}
+        ])
+
+
+def test_infinite_confidence():
+    with pytest.raises(ValueError):
+        generate_prediction_summary([
+            {"prediction": "Healthy", "confidence": float("inf")}
+        ])
+
+
+def test_disease_distribution():
+    result = generate_prediction_summary([
+        {"prediction": "Healthy", "confidence": 90},
+        {"prediction": "Blight", "confidence": 80},
+        {"prediction": "Blight", "confidence": 70}
+    ])
+
+    assert result["disease_distribution"]["Blight"]["count"] == 2
+    assert result["disease_distribution"]["Blight"]["percentage"] == 66.67
+
+
+def test_confidence_range():
+    result = generate_prediction_summary([
+        {"prediction": "Healthy", "confidence": 60},
+        {"prediction": "Blight", "confidence": 90}
+    ])
+
+    assert result["minimum_confidence"] == 60
+    assert result["maximum_confidence"] == 90
+
+
+def test_whitespace_in_disease_name():
+    result = generate_prediction_summary([
+        {"prediction": " Healthy ", "confidence": 90}
+    ])
+
+    assert result["healthy_count"] == 1
+
+
+def test_confidence_boundary_values():
+    result = generate_prediction_summary([
+        {"prediction": "Healthy", "confidence": 0},
+        {"prediction": "Blight", "confidence": 100}
+    ])
+
+    assert result["average_confidence"] == 50
