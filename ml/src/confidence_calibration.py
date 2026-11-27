@@ -1,29 +1,53 @@
 import numpy as np
 
 
+def _validate_numeric_array(values, name):
+    try:
+        array = np.asarray(values)
+    except (TypeError, ValueError) as error:
+        raise ValueError(f"{name} must contain valid numeric values") from error
+
+    if array.ndim != 1:
+        raise ValueError(f"{name} must be 1D")
+
+    if not np.issubdtype(array.dtype, np.number):
+        raise ValueError(f"{name} must contain numeric values")
+
+    if np.issubdtype(array.dtype, np.complexfloating):
+        raise ValueError(f"{name} must contain real values")
+
+    if not np.all(np.isfinite(array)):
+        raise ValueError(f"{name} must contain finite values")
+
+    return array
+
+
 def calculate_confidence_calibration(
     confidences,
     predictions,
     actual_labels,
     num_bins=10
 ):
+    if isinstance(confidences, (bool, np.bool_)):
+        raise ValueError("Confidences must be numeric")
 
-    try:
-        confidences = np.asarray(confidences, dtype=float)
-        predictions = np.asarray(predictions)
-        actual_labels = np.asarray(actual_labels)
+    if isinstance(predictions, (bool, np.bool_)):
+        raise ValueError("Predictions must contain integer class labels")
 
-    except (TypeError, ValueError) as error:
-        raise ValueError("Inputs must contain valid numeric values") from error
+    if isinstance(actual_labels, (bool, np.bool_)):
+        raise ValueError("Actual labels must contain integer class labels")
 
-    if confidences.ndim != 1:
-        raise ValueError("Confidences must be 1D")
+    if isinstance(num_bins, (bool, np.bool_)) or not isinstance(
+        num_bins, (int, np.integer)
+    ):
+        raise ValueError("Number of bins must be a positive integer")
 
-    if predictions.ndim != 1:
-        raise ValueError("Predictions must be 1D")
+    if num_bins <= 0:
+        raise ValueError("Number of bins must be positive")
 
-    if actual_labels.ndim != 1:
-        raise ValueError("Actual labels must be 1D")
+    confidences = _validate_numeric_array(confidences, "Confidences")
+    predictions = _validate_numeric_array(predictions, "Predictions")
+    actual_labels = _validate_numeric_array(actual_labels, "Actual labels")
 
     if not (
         len(confidences) == len(predictions) == len(actual_labels)
@@ -33,42 +57,32 @@ def calculate_confidence_calibration(
     if len(confidences) == 0:
         raise ValueError("Input arrays cannot be empty")
 
-    if not isinstance(num_bins, (int, np.integer)) or isinstance(
-        num_bins, (bool, np.bool_)
-    ):
-        raise ValueError("Number of bins must be a positive integer")
-
-    if num_bins <= 0:
-        raise ValueError("Number of bins must be positive")
-
-    if not np.all(np.isfinite(confidences)):
-        raise ValueError("Confidences must contain finite values")
+    confidences = confidences.astype(float)
+    predictions = predictions.astype(float)
+    actual_labels = actual_labels.astype(float)
 
     if np.any((confidences < 0) | (confidences > 1)):
         raise ValueError("Confidences must be between 0 and 1")
 
-    try:
-        if not np.all(np.isfinite(predictions)):
-            raise ValueError("Predictions must contain finite values")
+    if not np.all(predictions == np.floor(predictions)):
+        raise ValueError("Predictions must be integer class labels")
 
-        if not np.all(np.isfinite(actual_labels)):
-            raise ValueError("Actual labels must contain finite values")
+    if not np.all(actual_labels == np.floor(actual_labels)):
+        raise ValueError("Actual labels must be integer class labels")
 
-        if not np.all(predictions == predictions.astype(int)):
-            raise ValueError("Predictions must be integer class labels")
+    int64_min = -(2 ** 63)
+    int64_max_exclusive = 2 ** 63
 
-        if not np.all(actual_labels == actual_labels.astype(int)):
-            raise ValueError("Actual labels must be integer class labels")
+    if (
+        np.any(predictions < int64_min)
+        or np.any(predictions >= int64_max_exclusive)
+        or np.any(actual_labels < int64_min)
+        or np.any(actual_labels >= int64_max_exclusive)
+    ):
+        raise ValueError("Class labels are outside the supported integer range")
 
-    except (TypeError, ValueError, OverflowError) as error:
-        if isinstance(error, ValueError) and str(error).startswith(
-            ("Predictions", "Actual labels")
-        ):
-            raise
-        raise ValueError("Labels must contain valid integer values") from error
-
-    predictions = predictions.astype(int)
-    actual_labels = actual_labels.astype(int)
+    predictions = predictions.astype(np.int64)
+    actual_labels = actual_labels.astype(np.int64)
 
     correct = (predictions == actual_labels).astype(float)
 
@@ -82,14 +96,13 @@ def calculate_confidence_calibration(
 
         if i == num_bins - 1:
             mask = (
-                (confidences >= bin_edges[i]) &
-                (confidences <= bin_edges[i + 1])
+                (confidences >= bin_edges[i])
+                & (confidences <= bin_edges[i + 1])
             )
-
         else:
             mask = (
-                (confidences >= bin_edges[i]) &
-                (confidences < bin_edges[i + 1])
+                (confidences >= bin_edges[i])
+                & (confidences < bin_edges[i + 1])
             )
 
         count = int(np.sum(mask))
@@ -103,7 +116,6 @@ def calculate_confidence_calibration(
         calibration_error = abs(accuracy - average_confidence)
 
         ece += (count / len(confidences)) * calibration_error
-
         mce = max(mce, calibration_error)
 
         bin_results.append({
@@ -123,10 +135,8 @@ def calculate_confidence_calibration(
 
     if average_confidence > accuracy:
         reliability = "Overconfident"
-
     elif average_confidence < accuracy:
         reliability = "Underconfident"
-
     else:
         reliability = "Well Balanced"
 
