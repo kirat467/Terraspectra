@@ -101,3 +101,88 @@ open("docs/test_report.txt", "w", encoding="utf-8").write(r.stdout + "\n" + r.st
 print("\n".join(r.stdout.strip().splitlines()[-15:]))
 tests_ok = r.returncode == 0
 print("TESTS:", "ALL PASSED" if tests_ok else "SOME FAILED (see docs/test_report.txt)")
+# ============================================================
+# 2. WORD REPORT: Appendix A
+# ============================================================
+if os.path.exists(REPORT):
+    doc = Document(REPORT)
+    marker = "Appendix A"
+    start = next((p for p in doc.paragraphs if p.text.startswith(marker)), None)
+    if start is not None:                        # refresh: remove old appendix
+        el = start._element
+        body, sib = el.getparent(), el.getnext()
+        body.remove(el)
+        while sib is not None and not sib.tag.endswith("sectPr"):
+            nxt = sib.getnext()
+            body.remove(sib)
+            sib = nxt
+
+    def table(df, max_rows=20):
+        if df is None or len(df) == 0:
+            return
+        df = df.head(max_rows)
+        t = doc.add_table(rows=1, cols=len(df.columns))
+        try:
+            t.style = "Light Grid Accent 1"
+        except Exception:
+            t.style = "Table Grid"
+        for i, c in enumerate(df.columns):
+            t.rows[0].cells[i].text = str(c)
+        for _, row in df.iterrows():
+            cells = t.add_row().cells
+            for i, v in enumerate(row.values):
+                cells[i].text = f"{v:.4g}" if isinstance(v, float) else str(v)
+        doc.add_paragraph()
+
+    def fig(name, cap, w=6.0):
+        p = f"reports/figures/{name}.png"
+        if os.path.exists(p):
+            doc.add_picture(p, width=Inches(w))
+            doc.add_paragraph(cap).runs[0].italic = True
+
+    def bullets(items):
+        for x in items:
+            doc.add_paragraph(str(x), style="List Bullet")
+
+    doc.add_heading("Appendix A: Forecasting data and baselines (Day 26-27)", 1)
+    doc.add_paragraph("To support the forecasting part of the project, a time series of vegetation greenness (NDVI) and weather was built, "
+                      "and simple baselines were evaluated on it.")
+    doc.add_heading("A.1 Data", 2)
+    bullets([f"Sentinel-2 L2A (Microsoft Planetary Computer); {summ.get('scenes_used')} dates between {summ.get('date_range')}",
+             "Cloud, shadow, snow and water pixels removed with the scene classification layer (SCL); NDVI from B04/B08",
+             f"{summ.get('observations')} cell-date observations on a grid of cells over the study area",
+             "Weather: NASA POWER daily data converted to backward-looking rolling features (7 and 14 days); no future information used" if has_weather else "Weather features were not available",
+             f"Forecasting table: {summ.get('table_rows')} rows; temporal split {summ.get('split_counts')}",
+             "Target: NDVI change at the next observation (regression) and NDVI drop > "
+             f"{summ.get('drop_threshold')} (classification). These are stress proxies, NOT disease labels."])
+    doc.add_heading("A.2 Evaluation protocol", 2)
+    bullets(["Temporal split (train = earliest dates, test = latest dates)",
+             "Training rows whose target looked into the evaluation period were purged (no look-ahead)",
+             "Best model chosen on validation error, not test error",
+             "Confidence intervals by bootstrapping dates (cells are spatially correlated, so dates are the independent units)"])
+    doc.add_heading("A.3 Results", 2)
+    cols = ["model", "uses_weather", "val_mae", "test_mae", "test_r2", "test_skill_vs_persistence"]
+    table(res[[c for c in cols if c in res.columns]].round(4))
+    bullets(verdict)
+    fig("d27_model_comparison", "Figure A1: Test MAE of baselines")
+    fig("d27_predictions", "Figure A2: Predictions on the test period")
+    fig("d26_ndvi_timeseries", "Figure A3: NDVI time series per grid cell with rainfall")
+    fig("d26_ndvi_heatmap", "Figure A4: NDVI by cell and date")
+    if cv is not None:
+        doc.add_heading("A.4 Expanding-window cross-validation (MAE)", 2)
+        table(cv.round(4))
+    if imp is not None:
+        doc.add_heading("A.5 Feature importance (descriptive)", 2)
+        table(imp.round(4), 10)
+        fig("d27_feature_importance", "Figure A5: Permutation importance")
+    if cls_lines:
+        doc.add_heading("A.6 Stress-proxy classification", 2)
+        bullets(cls_lines)
+    doc.add_heading("A.7 Limitations", 2)
+    bullets(["Few dates and one small area: uncertainty is wide; persistence ('no change') is a strong baseline for smooth NDVI series.",
+             "NDVI change can also come from harvest, irrigation or drought, not only disease.",
+             "A true disease-forecasting claim needs confirmed disease labels (field data), which are still pending."])
+    doc.save(REPORT)
+    print("Updated", REPORT, "(Appendix A)")
+else:
+    print("Report not found (run day24_final_package.py first); skipping Word update")
