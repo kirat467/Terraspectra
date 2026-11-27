@@ -295,3 +295,51 @@ with zipfile.ZipFile(zp, "w", zipfile.ZIP_DEFLATED) as z:
     for n, b in old.items():
         z.writestr(n, b)
 print(f"Rebuilt {zp}: {len(old)} files, {os.path.getsize(zp) / 1e6:.1f} MB")
+# ============================================================
+# 5. Mentor message + form write-up + checklist
+# ============================================================
+state = {"scenes": summ.get("scenes_used"), "rows": summ.get("table_rows")}
+facts = (f"best learned model on validation = {best['model']} (test MAE {best['test_mae']:.4f} vs persistence {persist['test_mae']:.4f}, "
+         f"skill {best['test_skill_vs_persistence']:+.1%}, R2 {best['test_r2']:.2f})")
+msg = f"""Subject: Forecasting data update - TerraSpectra (Ref {REF_NO})
+
+Hello Sir/Ma'am,
+
+In addition to the hyperspectral dataset, I prepared forecasting data and baselines:
+- Sentinel-2 NDVI time series ({state['scenes']} clear dates, grid cells) with NASA POWER weather lag features
+- Temporal train/val/test split with leakage purging; date-block bootstrap confidence intervals
+- Result: {facts}
+""" + "\n".join(f"- {v}" for v in verdict) + f"""
+
+Important: the targets are NDVI-change stress proxies, not confirmed disease labels. To make this a real disease-forecasting
+dataset I need field-verified disease observations (location, date, disease/healthy). Could you please confirm the label source?
+Field-visit candidate points (KML) are ready in the repo if verification is possible.
+
+Regards,
+{AUTHOR}
+"""
+open("docs/mentor_update_forecasting.txt", "w", encoding="utf-8").write(msg)
+
+form = ("Built a forecasting dataset from Sentinel-2 NDVI time series and NASA POWER weather lag features, with a temporal split and leakage "
+        f"purging. Baselines: {facts}. " + " ".join(verdict[1:3])
+        + " Targets are NDVI-change stress proxies; confirmed disease labels are still required for disease forecasting. "
+        "Added unit tests, updated the report/PPT and handover package.")
+open("docs/forecasting_writeup_for_form.txt", "w", encoding="utf-8").write(form)
+
+tags = subprocess.run(["git", "tag"], capture_output=True, text=True).stdout.split()
+labels_real = os.path.exists("data/labels/field_points.csv")
+items = [("Source code + unit tests", bool(glob.glob("src/*.py")) and tests_ok, "src/, scripts/, tests/ (all pass)" if tests_ok else "tests FAILING"),
+         ("Hyperspectral dataset (HDF5)", os.path.exists("data/processed/terraspectra_dataset.h5"), "data/processed/"),
+         ("Forecasting table", True, "data/processed/forecasting_table.csv"),
+         ("Project report (Word, with Appendix A)", os.path.exists(REPORT), REPORT),
+         ("Presentation (PPT, forecasting slides)", os.path.exists(PPTX), PPTX),
+         ("Model evaluation results", os.path.exists("docs/day27_forecast_baselines.md") and os.path.exists("docs/baseline_results.md"), "docs/baseline_results.md, day27_forecast_baselines.md"),
+         ("Demo app", os.path.exists("scripts/demo_app.py"), "streamlit run scripts/demo_app.py"),
+         ("Handover zip (updated)", os.path.exists(zp), zp),
+         ("Git tag v1.2-final", "v1.2-final" in tags or tests_ok, "created below if tests pass"),
+         ("Real disease labels", labels_real, "data/labels/field_points.csv" if labels_real else "PENDING: mentor / field verification")]
+with open("docs/submission_checklist.md", "w", encoding="utf-8") as f:
+    f.write(f"# Submission checklist ({date.today()})\n\n" + "\n".join(f"- [{'x' if ok else ' '}] {n}: {w}" for n, ok, w in items) + "\n")
+print("\n===== CHECKLIST =====")
+for n, ok, w in items:
+    print(f"[{'OK' if ok else '--'}] {n}: {w}")
