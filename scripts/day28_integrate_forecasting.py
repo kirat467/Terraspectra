@@ -343,3 +343,21 @@ with open("docs/submission_checklist.md", "w", encoding="utf-8") as f:
 print("\n===== CHECKLIST =====")
 for n, ok, w in items:
     print(f"[{'OK' if ok else '--'}] {n}: {w}")
+    # ============================================================
+# 6. Git
+# ============================================================
+try:
+    subprocess.run(["git", "add", "-A"], check=True)
+    subprocess.run(["git", "commit", "-m", "Day 28: integrate forecasting into report, PPT, handover, tests"], check=False)
+    if tests_ok:
+        subprocess.run(["git", "tag", "-f", "v1.2-final"], check=True)
+    if subprocess.run(["git", "remote"], capture_output=True, text=True).stdout.strip():
+        subprocess.run(["git", "push"], check=False)
+        if tests_ok:
+            subprocess.run(["git", "push", "-f", "origin", "v1.2-final"], check=False)
+except Exception as e:
+    print("Git issue:", e)
+
+print("\nDAY 28 DONE." + (" Tag v1.2-final created." if tests_ok else " Tag NOT created (tests failing)."))
+print("Send to mentor: docs/mentor_update_forecasting.txt + outputs/TerraSpectra_Dataset_Handover.zip")
+print("Form text: docs/forecasting_writeup_for_form.txt")
