@@ -36,3 +36,17 @@ def md_section(path, title):
         return []
     part = txt.split(title, 1)[1].split("\n## ", 1)[0]
     return [l[2:].strip() for l in part.splitlines() if l.startswith("- ")]
+# ---------- inputs from Day 26-27 ----------
+res = cs("data/metadata/forecast_results.csv")
+cv = cs("data/metadata/forecast_cv.csv")
+imp = cs("data/metadata/forecast_feature_importance.csv")
+summ = jl("data/metadata/timeseries_summary.json")
+if res is None or not os.path.exists("data/processed/forecasting_table.csv"):
+    raise SystemExit("Day 26/27 outputs not found. Run day26_ndvi_timeseries.py and day27_forecast_baselines.py first.")
+verdict = md_section("docs/day27_forecast_baselines.md", "## Verdict")
+cls_lines = md_section("docs/day27_forecast_baselines.md", "## Classification (stress proxy)")
+learned = res[res["learned"]].sort_values("val_mae")
+best = learned.iloc[0]
+persist = res[res["model"] == "persistence (delta=0)"].iloc[0]
+has_weather = bool(res["uses_weather"].any())
+print(f"Best learned model (validation): {best['model']} | test MAE {best['test_mae']:.4f} vs persistence {persist['test_mae']:.4f}")
