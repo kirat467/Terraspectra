@@ -1,3 +1,6 @@
+from numbers import Integral
+
+
 def analyze_prediction_stability(predictions):
     if not isinstance(predictions, list):
         raise TypeError("Predictions must be a list")
@@ -9,17 +12,20 @@ def analyze_prediction_stability(predictions):
 
     for index, sample in enumerate(predictions):
         if not isinstance(sample, (list, tuple)):
-            raise TypeError("Each sample must contain a list of predictions")
+            raise TypeError("Each sample must contain a list or tuple of predictions")
 
         if not sample:
             raise ValueError("Each sample must have at least one prediction")
 
-        if any(value is None for value in sample):
-            raise ValueError("Predictions cannot contain None")
-
         counts = {}
 
         for value in sample:
+            if value is None:
+                raise ValueError("Predictions cannot contain None")
+
+            if isinstance(value, bool) or not isinstance(value, Integral):
+                raise ValueError("Predictions must contain integer labels")
+
             counts[value] = counts.get(value, 0) + 1
 
         majority_count = max(counts.values())
