@@ -186,3 +186,49 @@ if os.path.exists(REPORT):
     print("Updated", REPORT, "(Appendix A)")
 else:
     print("Report not found (run day24_final_package.py first); skipping Word update")
+# ============================================================
+# 3. PPT: 2 slides
+# ============================================================
+NAVY, GREY = RGBColor(0x1B, 0x2A, 0x5C), RGBColor(0x44, 0x44, 0x44)
+
+
+def add_text(s, text, x, y, w, h, size=18, bold=False, color=GREY):
+    tf = s.shapes.add_textbox(PI(x), PI(y), PI(w), PI(h)).text_frame
+    tf.word_wrap = True
+    for k, line in enumerate(text.split("\n")):
+        p = tf.paragraphs[0] if k == 0 else tf.add_paragraph()
+        p.text = line
+        p.font.size, p.font.bold, p.font.color.rgb = PPt(size), bold, color
+        p.space_after = PPt(6)
+
+
+def add_fig(s, name, x, y, w):
+    p = f"reports/figures/{name}.png"
+    if os.path.exists(p):
+        s.shapes.add_picture(p, PI(x), PI(y), width=PI(w))
+
+
+if os.path.exists(PPTX):
+    prs = Presentation(PPTX)
+    for sl in list(prs.slides):                          # refresh: delete old forecasting slides
+        titles = [sh.text_frame.text for sh in sl.shapes if sh.has_text_frame]
+        if any(t.startswith(("5. Forecasting", "6. Forecasting")) for t in titles):
+            for sldId in list(prs.slides._sldIdLst):
+                if prs.part.related_part(sldId.rId) is sl.part:
+                    prs.part.drop_rel(sldId.rId)
+                    prs.slides._sldIdLst.remove(sldId)
+    blank = prs.slide_layouts[6]
+    s = prs.slides.add_slide(blank)
+    add_text(s, "5. Forecasting data: NDVI time series + weather", 0.6, 0.35, 12, 0.9, 30, True, NAVY)
+    add_text(s, f"Sentinel-2 NDVI, {summ.get('scenes_used')} clear dates\nCloud/shadow removed with SCL\n"
+                f"Weather: NASA POWER rolling features (backward-looking)\nTable: {summ.get('table_rows')} rows, temporal split\n"
+                "Target = next NDVI change (stress proxy)", 0.6, 1.5, 4.8, 4.5, 18)
+    add_fig(s, "d26_ndvi_timeseries", 5.6, 1.6, 7.3)
+    s = prs.slides.add_slide(blank)
+    add_text(s, "6. Forecasting baselines and honest findings", 0.6, 0.35, 12, 0.9, 30, True, NAVY)
+    add_text(s, "\n".join(["- " + v for v in verdict[:3]] + ["- Targets are proxies; disease labels still needed"]), 0.6, 1.5, 5.4, 5, 16)
+    add_fig(s, "d27_model_comparison", 6.2, 1.6, 6.8)
+    prs.save(PPTX)
+    print("Updated", PPTX, "(+2 slides)")
+else:
+    print("PPT not found (run day19_20_all.py first); skipping")
