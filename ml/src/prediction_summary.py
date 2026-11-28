@@ -1,4 +1,5 @@
 from collections import Counter
+from math import isfinite
 
 
 def generate_prediction_summary(predictions):
@@ -14,12 +15,15 @@ def generate_prediction_summary(predictions):
             "most_common_disease": None,
             "average_confidence": 0,
             "healthy_percentage": 0,
-            "diseased_percentage": 0
+            "diseased_percentage": 0,
+            "disease_distribution": {},
+            "minimum_confidence": 0,
+            "maximum_confidence": 0
         }
 
     disease_counts = Counter()
-    healthy_count = 0
     confidence_values = []
+    healthy_count = 0
 
     for item in predictions:
 
@@ -33,22 +37,33 @@ def generate_prediction_summary(predictions):
             raise ValueError("Invalid disease name")
 
         if (
-            not isinstance(confidence, (int, float))
-            or isinstance(confidence, bool)
+            isinstance(confidence, bool)
+            or not isinstance(confidence, (int, float))
+            or not isfinite(confidence)
             or not 0 <= confidence <= 100
         ):
             raise ValueError("Invalid confidence value")
 
+        disease = disease.strip()
+
         disease_counts[disease] += 1
         confidence_values.append(confidence)
 
-        if disease.strip().lower() == "healthy":
+        if disease.lower() == "healthy":
             healthy_count += 1
 
     total = len(predictions)
     diseased_count = total - healthy_count
 
     most_common = disease_counts.most_common(1)[0][0]
+
+    disease_distribution = {
+        disease: {
+            "count": count,
+            "percentage": round(count / total * 100, 2)
+        }
+        for disease, count in disease_counts.items()
+    }
 
     return {
         "total_predictions": total,
@@ -63,5 +78,8 @@ def generate_prediction_summary(predictions):
         ),
         "diseased_percentage": round(
             diseased_count / total * 100, 2
-        )
+        ),
+        "disease_distribution": disease_distribution,
+        "minimum_confidence": round(min(confidence_values), 2),
+        "maximum_confidence": round(max(confidence_values), 2)
     }

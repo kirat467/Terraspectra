@@ -1,4 +1,5 @@
 import math
+from numbers import Real
 from collections import defaultdict
 
 
@@ -14,20 +15,30 @@ def generate_disease_analytics(predictions):
         if not isinstance(item, dict):
             raise ValueError("Invalid prediction record")
 
-        disease = item.get("prediction")
-        confidence = item.get("confidence")
+        if "prediction" not in item or "confidence" not in item:
+            raise ValueError("Prediction or confidence value is missing")
+
+        disease = item["prediction"]
+        confidence = item["confidence"]
 
         if not isinstance(disease, str) or not disease.strip():
             raise ValueError("Invalid disease name")
 
-        if (
-            not isinstance(confidence, (int, float))
-            or isinstance(confidence, bool)
-            or not math.isfinite(confidence)
-            or not 0 <= confidence <= 100
-        ):
+        if isinstance(confidence, bool) or not isinstance(confidence, Real):
+            raise ValueError("Confidence must be numeric")
+
+        try:
+            confidence = float(confidence)
+        except (ValueError, OverflowError):
             raise ValueError("Invalid confidence value")
 
+        if not math.isfinite(confidence):
+            raise ValueError("Confidence must be finite")
+
+        if not 0 <= confidence <= 100:
+            raise ValueError("Confidence must be between 0 and 100")
+
+        disease = disease.strip()
         disease_data[disease].append(confidence)
 
     total = len(predictions)

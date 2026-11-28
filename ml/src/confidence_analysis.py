@@ -1,10 +1,19 @@
+import math
+import numpy as np
+
+
 def classify_confidence(confidence):
 
-    if (
-        not isinstance(confidence, (int, float))
-        or isinstance(confidence, bool)
-        or not 0 <= confidence <= 100
-    ):
+    if isinstance(confidence, (bool, np.bool_)):
+        raise ValueError("Confidence must be a number between 0 and 100")
+
+    if not isinstance(confidence, (int, float, np.integer, np.floating)):
+        raise ValueError("Confidence must be numeric")
+
+    if not math.isfinite(float(confidence)):
+        raise ValueError("Confidence must be finite")
+
+    if not 0 <= confidence <= 100:
         raise ValueError("Confidence must be between 0 and 100")
 
     if confidence < 40:
@@ -15,7 +24,7 @@ def classify_confidence(confidence):
         level = "High"
 
     return {
-        "confidence": round(confidence, 2),
+        "confidence": round(float(confidence), 2),
         "confidence_level": level
     }
 
@@ -36,6 +45,7 @@ def analyze_prediction_confidence(predictions):
             raise ValueError("Confidence value is missing")
 
         result = prediction.copy()
+
         result.update(
             classify_confidence(prediction["confidence"])
         )

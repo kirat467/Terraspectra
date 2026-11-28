@@ -1,33 +1,61 @@
-
 import numpy as np
 from collections import Counter
 
 
 def analyze_dataset(images, labels):
+    """Analyze dataset dimensions, missing labels, and class distribution."""
 
-    if len(images) != len(labels):
+    if images is None:
+        raise ValueError("Images cannot be None")
+
+    if labels is None:
+        raise ValueError("Labels cannot be None")
+
+    try:
+        image_count = len(images)
+        label_count = len(labels)
+    except TypeError as exc:
+        raise ValueError("Images and labels must be sized collections") from exc
+
+    if image_count != label_count:
         raise ValueError("Images and labels must have equal length")
 
-    if len(labels) == 0:
+    if label_count == 0:
         raise ValueError("Dataset is empty")
 
-    missing = [
-        label is None or (
-            isinstance(label, (float, np.floating)) and np.isnan(label)
-        )
-        for label in labels
-    ]
+    if isinstance(images, np.ndarray):
+        if images.ndim < 2:
+            raise ValueError("Images must have at least 2 dimensions")
+
+        if not np.issubdtype(images.dtype, np.number):
+            raise ValueError("Images must contain numeric values")
+
+        if not np.isfinite(images).all():
+            raise ValueError("Images must contain only finite values")
+
+    missing = []
+
+    for label in labels:
+        is_missing = label is None
+
+        if isinstance(label, (float, np.floating)):
+            is_missing = is_missing or np.isnan(label)
+
+        missing.append(is_missing)
 
     valid_labels = [
         label for label, is_missing in zip(labels, missing)
         if not is_missing
     ]
 
-    distribution = Counter(valid_labels)
+    try:
+        distribution = Counter(valid_labels)
+    except TypeError as exc:
+        raise ValueError("Labels must be hashable values") from exc
 
     print("\n--- TerraSpectra Dataset Report ---")
-    print("Total images:", len(images))
-    print("Total labels:", len(labels))
+    print("Total images:", image_count)
+    print("Total labels:", label_count)
     print("Missing labels:", sum(missing))
     print("Disease classes:", len(distribution))
     print("\nClass distribution:")

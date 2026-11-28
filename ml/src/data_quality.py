@@ -2,7 +2,8 @@ import numpy as np
 
 
 def analyze_data_quality(cube):
-    cube = np.asarray(cube, dtype=np.float32)
+
+    cube = np.asarray(cube)
 
     if cube.ndim != 3:
         raise ValueError("Cube must be 3-dimensional")
@@ -10,8 +11,16 @@ def analyze_data_quality(cube):
     if cube.size == 0:
         raise ValueError("Cube cannot be empty")
 
+    if not np.issubdtype(cube.dtype, np.number):
+        raise ValueError("Cube must contain numeric values")
+
+    if np.iscomplexobj(cube):
+        raise ValueError("Cube must contain real values")
+
     if not np.isfinite(cube).all():
         raise ValueError("Cube contains NaN or infinite values")
+
+    cube = cube.astype(np.float64)
 
     band_means = cube.mean(axis=(0, 1))
     band_stds = cube.std(axis=(0, 1))
